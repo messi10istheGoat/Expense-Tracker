@@ -17,6 +17,7 @@ import {
   Leaf,
   Menu,
   Moon,
+  Palette,
   Plus,
   Repeat2,
   Search,
@@ -37,6 +38,8 @@ import { Accounts, Bills, Budgets, Goals } from './finance/Planning';
 import { Insights } from './finance/Insights';
 import { Lab } from './finance/Lab';
 import { Settings } from './finance/Settings';
+import { ThemeStudio } from './finance/ThemeStudio';
+import { STYLES } from './finance/appearance';
 import { Modal } from './finance/ui';
 
 const pages = [
@@ -186,7 +189,7 @@ function SearchDialog({
 }
 function WorkspaceApp() {
   const { w, storageError, notify } = useFinance();
-  const { isDark, toggle } = useTheme();
+  const { isDark, toggle, style } = useTheme();
   const [page, setPage] = useState(getPage);
   const [month, setMonth] = useState(monthKey());
   const [online, setOnline] = useState(navigator.onLine);
@@ -194,6 +197,7 @@ function WorkspaceApp() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState(false);
   const [help, setHelp] = useState(false);
+  const [studio, setStudio] = useState(false);
   const [transaction, setTransaction] = useState<{ entry?: Entry; draft?: Partial<Entry> } | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const navigate = (id: string) => {
@@ -292,8 +296,8 @@ function WorkspaceApp() {
         <div className="workspace-switch">
           <span className="workspace-avatar">{w.profile.name.slice(0, 1).toUpperCase()}</span>
           <div>
-            <strong>Personal workspace</strong>
-            <small>{w.demo ? 'Exploring with demo data' : 'A little more intentional'}</small>
+            <strong>My workspace</strong>
+            <small>{w.demo ? 'Demo workspace' : 'On this device'}</small>
           </div>
           <Leaf size={14} />
         </div>
@@ -359,6 +363,16 @@ function WorkspaceApp() {
             <strong>{page === 'settings' ? 'Settings' : currentPage?.label}</strong>
           </div>
           <div className="header-actions">
+            <button
+              className="studio-trigger"
+              aria-label="Open Style Studio"
+              title="Personalize your workspace"
+              onClick={() => setStudio(true)}
+            >
+              <Palette size={18} />
+              <span>{STYLES.find((item) => item.id === style)?.name}</span>
+              <ChevronDown size={13} />
+            </button>
             <button className="header-search" aria-label="Search workspace" onClick={() => setSearch(true)}>
               <Search size={16} />
               <span>Find anything…</span>
@@ -431,7 +445,11 @@ function WorkspaceApp() {
                   <ChevronDown size={13} />
                 </div>
               )}
-              <button className="button add-button" onClick={() => setTransaction({})}>
+              <button
+                className="button add-button"
+                aria-label="Add transaction"
+                onClick={() => setTransaction({})}
+              >
                 <Plus size={17} />
                 <span>Add transaction</span>
               </button>
@@ -525,6 +543,16 @@ function WorkspaceApp() {
               <ArrowUpRight size={16} />
             </button>
           </nav>
+        </Modal>
+      )}
+      {studio && (
+        <Modal
+          title="Style Studio"
+          sub="A different mood. The same Spendwise."
+          wide
+          onClose={() => setStudio(false)}
+        >
+          <ThemeStudio compact />
         </Modal>
       )}
       {search && <SearchDialog onClose={() => setSearch(false)} navigate={navigate} onEdit={onEdit} />}

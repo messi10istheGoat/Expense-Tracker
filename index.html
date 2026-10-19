@@ -15,16 +15,28 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>Spendwise — Personal Finance Dashboard</title>
     <script>
-      // Apply the saved (or system) theme before first paint to avoid a flash.
+      // Match the appearance provider before first paint, including legacy users.
       (function () {
+        var mode = 'system',
+          style = 'minimal',
+          textSize = 'standard';
         try {
-          var stored = localStorage.getItem('spendwise-theme');
-          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var dark = stored ? stored === 'dark' : prefersDark;
-          var root = document.documentElement;
-          if (dark) root.classList.add('dark');
-          root.style.colorScheme = dark ? 'dark' : 'light';
+          var savedMode = localStorage.getItem('spendwise-theme');
+          var savedStyle = localStorage.getItem('spendwise-style');
+          if (savedMode === 'light' || savedMode === 'dark') {
+            mode = savedMode;
+            style = 'botanical';
+          }
+          if (['minimal', 'botanical', 'brutalist', 'neon'].indexOf(savedStyle) !== -1) style = savedStyle;
+          if (localStorage.getItem('spendwise-text-size') === 'large') textSize = 'large';
         } catch (e) {}
+        var dark =
+          mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var root = document.documentElement;
+        root.classList.toggle('dark', dark);
+        root.dataset.style = style;
+        root.dataset.textSize = textSize;
+        root.style.colorScheme = dark ? 'dark' : 'light';
       })();
     </script>
   </head>

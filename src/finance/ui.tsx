@@ -12,6 +12,8 @@ import {
   Sprout,
   X,
 } from 'lucide-react';
+import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
+import { useTheme } from '../hooks/useTheme';
 import { CATEGORIES } from '../lib/categories';
 import type { CategoryId } from '../lib/types';
 
@@ -65,9 +67,21 @@ export function Empty({ title, text, action }: { title: string; text: string; ac
 }
 export function CategoryIcon({ id, size = 18 }: { id: CategoryId; size?: number }) {
   const c = CATEGORIES[id];
+  const { isDark } = useTheme();
+  const contrastColors: Partial<Record<CategoryId, string>> = {
+    utilities: '#8c6900',
+    groceries: '#237744',
+    salary: '#167048',
+    health: '#14766e',
+    dining: '#aa4e0f',
+    transport: '#08769b',
+    refunds: '#916219',
+    investments: '#7450c4',
+  };
+  const color = isDark ? `color-mix(in srgb, ${c.color} 65%, white)` : (contrastColors[id] ?? c.color);
   const Icon = c.icon;
   return (
-    <span className="category-icon" style={{ background: `${c.color}16`, color: c.color }}>
+    <span className="category-icon" style={{ background: `${c.color}16`, color }}>
       <Icon size={size} />
     </span>
   );
@@ -199,4 +213,15 @@ export function GoalGlyph({ emoji }: { emoji: string }) {
       } as Record<string, typeof Sprout>
     )[emoji] ?? Landmark;
   return <Icon size={22} strokeWidth={1.65} />;
+}
+
+/** Announce the final amount; animate only the visual value when a filter changes. */
+export function AnimatedValue({ value, format }: { value: number; format: (value: number) => string }) {
+  const display = useAnimatedNumber(value, 420);
+  return (
+    <span>
+      <span className="sr-only">{format(value)}</span>
+      <span aria-hidden="true">{format(display)}</span>
+    </span>
+  );
 }

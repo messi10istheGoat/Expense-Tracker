@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
 /** Smoothly tweens a number towards `target` whenever it changes. */
 export function useAnimatedNumber(target: number, duration = 750): number {
-  const [value, setValue] = useState(0);
-  const current = useRef(0);
+  const [value, setValue] = useState(target);
+  const current = useRef(target);
 
   useEffect(() => {
     const from = current.current;
     if (from === target) return;
-    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const reduce =
+      typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (reduce) {
       current.current = target;
       setValue(target);

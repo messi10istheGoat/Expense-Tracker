@@ -209,7 +209,7 @@ export function Lab({ onCapture }: { onCapture: (draft: Partial<Entry>) => void 
                 <span>Current spending</span>
                 <Progress value={100} />
                 <span>With your small shift</span>
-                <Progress value={100 - cut} color="#b5c89b" />
+                <Progress value={100 - cut} color="var(--chart-expense)" />
               </div>
               <p className="form-hint">
                 A scenario, not a promise. Assumes the last 30 days repeat each month. No interest or price
