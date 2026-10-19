@@ -1,283 +1,624 @@
-import { useMemo, useRef, useState } from "react";
-import { BudgetList } from "./components/BudgetList";
-import { CashFlowChart } from "./components/charts/CashFlowChart";
-import { CategoryBars } from "./components/charts/CategoryBars";
-import { CategoryDonut } from "./components/charts/CategoryDonut";
-import { WeekdayChart } from "./components/charts/WeekdayChart";
-import { FilterBar } from "./components/FilterBar";
-import { Header } from "./components/Header";
-import { Insights } from "./components/Insights";
-import { KpiCard } from "./components/KpiCard";
-import { TopMerchants } from "./components/TopMerchants";
-import { TransactionsTable } from "./components/TransactionsTable";
-import { ThemeProvider } from "./hooks/useTheme";
+import { useEffect, useRef, useState } from 'react';
 import {
-  aggregateSeries,
-  allowedGranularities,
-  autoGranularity,
-  breakdownByCategory,
-  breakdownByMerchant,
-  budgetProgress,
-  buildInsights,
-  compareLabel,
-  computeTotals,
-  filterTransactions,
-  getViewMode,
-  presetLabel,
-  presetRange,
-  previousRange,
-  PRESETS,
-  topMerchants,
-  weekdayStats,
-} from "./lib/analytics";
-import { CATEGORIES } from "./lib/categories";
-import { generateDataset } from "./lib/data";
-import { isSameDay, rangeLength } from "./lib/dates";
-import { fmtDate, fmtInt, fmtRange, pluralize } from "./lib/format";
-import { buildKpis } from "./lib/kpis";
-import type { AccountId, CategoryId, DateRange, Filters, Granularity, RangePreset, Slice, TxType, TypeFilter } from "./lib/types";
+  ArrowDownUp,
+  ArrowRight,
+  ArrowUpRight,
+  CalendarDays,
+  ChartNoAxesCombined,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  CircleHelp,
+  Command,
+  FlaskConical,
+  Flower2,
+  HardDrive,
+  LayoutDashboard,
+  Leaf,
+  Menu,
+  Moon,
+  Plus,
+  Repeat2,
+  Search,
+  Settings as SettingsIcon,
+  ShieldCheck,
+  Sparkles,
+  Sprout,
+  Sun,
+  Target,
+  Wallet,
+} from 'lucide-react';
+import { ThemeProvider, useTheme } from './hooks/useTheme';
+import { FinanceProvider, useFinance } from './finance/store';
+import { monthKey, type Entry } from './finance/model';
+import { Overview } from './finance/Overview';
+import { TransactionForm, Transactions } from './finance/Transactions';
+import { Accounts, Bills, Budgets, Goals } from './finance/Planning';
+import { Insights } from './finance/Insights';
+import { Lab } from './finance/Lab';
+import { Settings } from './finance/Settings';
+import { Modal } from './finance/ui';
 
-const DEFAULT_PRESET: Exclude<RangePreset, "custom"> = "12m";
-
-function greeting(d = new Date()) {
-  const h = d.getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+const pages = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    icon: LayoutDashboard,
+    group: 'YOUR WORKSPACE',
+    sub: 'A little clarity for your everyday.',
+  },
+  {
+    id: 'transactions',
+    label: 'Transactions',
+    icon: ArrowDownUp,
+    group: '',
+    sub: 'Every money moment, all in one place.',
+  },
+  {
+    id: 'accounts',
+    label: 'Accounts',
+    icon: Wallet,
+    group: '',
+    sub: 'The bigger picture, without the guesswork.',
+  },
+  {
+    id: 'budgets',
+    label: 'Budgets',
+    icon: ChartNoAxesCombined,
+    group: 'MAKE ROOM FOR MORE',
+    sub: 'A thoughtful plan for the way you live.',
+  },
+  {
+    id: 'goals',
+    label: 'Savings goals',
+    icon: Target,
+    group: '',
+    sub: 'For the things you can’t wait to make happen.',
+  },
+  {
+    id: 'bills',
+    label: 'Bills & subscriptions',
+    icon: Repeat2,
+    group: '',
+    sub: 'A little foresight goes a long way.',
+  },
+  {
+    id: 'insights',
+    label: 'Insights',
+    icon: ChartNoAxesCombined,
+    group: 'A FRESH PERSPECTIVE',
+    sub: 'The patterns behind your everyday spending.',
+  },
+  {
+    id: 'lab',
+    label: 'Decision lab',
+    icon: FlaskConical,
+    group: '',
+    sub: 'Explore the possibilities before you spend.',
+  },
+];
+interface InstallPrompt extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
-
-function Dashboard() {
-  const dataset = useMemo(() => generateDataset(), []);
-  const { start: dataStart, end: today } = dataset;
-
-  const makeDefaults = (): Filters => ({
-    preset: DEFAULT_PRESET,
-    range: presetRange(DEFAULT_PRESET, today, dataStart),
-    type: "all",
-    accounts: [],
-    categories: [],
-  });
-
-  const [filters, setFilters] = useState<Filters>(makeDefaults);
-  const [granOverride, setGranOverride] = useState<Granularity | null>(null);
-  const [query, setQuery] = useState("");
-  const tableRef = useRef<HTMLDivElement>(null);
-
-  // ───────────── Filter actions
-  const setPreset = (preset: Exclude<RangePreset, "custom">) => {
-    setFilters((f) => ({ ...f, preset, range: presetRange(preset, today, dataStart) }));
-    setGranOverride(null);
-  };
-
-  const setRange = (range: DateRange) => {
-    const match = PRESETS.find((p) => {
-      const r = presetRange(p.value, today, dataStart);
-      return isSameDay(r.from, range.from) && isSameDay(r.to, range.to);
-    });
-    setFilters((f) => ({ ...f, range, preset: match ? match.value : "custom" }));
-    setGranOverride(null);
-  };
-
-  const setType = (type: TypeFilter) =>
-    setFilters((f) => ({
-      ...f,
-      type,
-      categories: type === "all" ? f.categories : f.categories.filter((c) => CATEGORIES[c].type === type),
-    }));
-
-  const setAccounts = (accounts: AccountId[]) => setFilters((f) => ({ ...f, accounts }));
-  const setCategories = (categories: CategoryId[]) => setFilters((f) => ({ ...f, categories }));
-
-  const focusCategory = (id: CategoryId) =>
-    setFilters((f) => ({
-      ...f,
-      categories: [id],
-      type: f.type === "all" || f.type === CATEGORIES[id].type ? f.type : "all",
-    }));
-
-  const reset = () => {
-    setFilters(makeDefaults());
-    setGranOverride(null);
-    setQuery("");
-  };
-
-  const scrollToTable = () => tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  const showMerchant = (merchant: string) => {
-    setQuery(merchant);
-    scrollToTable();
-  };
-
-  // ───────────── Derived data — every view reads from the same filtered set
-  const { range } = filters;
-  const days = rangeLength(range);
-  const mode = getViewMode(filters);
-  const focus: TxType = mode === "income" ? "income" : "expense";
-  const prevRange = useMemo(() => previousRange(range), [range]);
-  const comparable = prevRange.from.getTime() >= dataStart.getTime();
-
-  const current = useMemo(() => filterTransactions(dataset.transactions, range, filters), [dataset, range, filters]);
-  const previous = useMemo(
-    () => (comparable ? filterTransactions(dataset.transactions, prevRange, filters) : null),
-    [dataset, prevRange, filters, comparable],
+const getPage = () => {
+  const hash = window.location.hash.slice(1);
+  return [...pages.map((p) => p.id), 'settings'].includes(hash) ? hash : 'overview';
+};
+function SearchDialog({
+  onClose,
+  navigate,
+  onEdit,
+}: {
+  onClose: () => void;
+  navigate: (p: string) => void;
+  onEdit: (t: Entry) => void;
+}) {
+  const { w, money } = useFinance();
+  const [q, setQ] = useState('');
+  const transactions =
+    q.length > 1
+      ? w.transactions
+          .filter((t) => `${t.merchant} ${t.note ?? ''}`.toLowerCase().includes(q.toLowerCase()))
+          .sort((a, b) => b.date.localeCompare(a.date))
+          .slice(0, 6)
+      : [];
+  const destinations = [...pages, { id: 'settings', label: 'Settings', icon: SettingsIcon }].filter(
+    (p) => !q || p.label.toLowerCase().includes(q.toLowerCase()),
   );
-
-  const allowed = allowedGranularities(range);
-  const granularity: Granularity = granOverride && allowed[granOverride] ? granOverride : autoGranularity(range);
-
-  const series = useMemo(() => aggregateSeries(current, range, granularity), [current, range, granularity]);
-  const totals = useMemo(() => computeTotals(current, days), [current, days]);
-  const prevTotals = useMemo(() => (previous ? computeTotals(previous, days) : null), [previous, days]);
-  const kpis = useMemo(() => buildKpis(mode, totals, prevTotals, series), [mode, totals, prevTotals, series]);
-
-  const focusCats = filters.categories.filter((c) => CATEGORIES[c].type === focus);
-  const drillCategory = focusCats.length === 1 ? focusCats[0] : null;
-  const slices = useMemo(
-    () =>
-      drillCategory
-        ? breakdownByMerchant(
-            current.filter((t) => t.category === drillCategory),
-            focus,
-          )
-        : breakdownByCategory(current, focus),
-    [current, focus, drillCategory],
-  );
-
-  const weekdays = useMemo(() => weekdayStats(current, range, focus), [current, range, focus]);
-  const budgets = useMemo(() => budgetProgress(current, range, filters.categories), [current, range, filters.categories]);
-  const merchants = useMemo(() => topMerchants(current, previous, focus, 6), [current, previous, focus]);
-  const insights = useMemo(() => buildInsights({ current, previous, totals, mode, weekdays }), [current, previous, totals, mode, weekdays]);
-
-  const counts = useMemo(() => {
-    const accounts = new Map<AccountId, number>();
-    const categories = new Map<CategoryId, number>();
-    for (const t of filterTransactions(dataset.transactions, range, { type: "all", accounts: [], categories: [] })) {
-      accounts.set(t.account, (accounts.get(t.account) ?? 0) + 1);
-      categories.set(t.category, (categories.get(t.category) ?? 0) + 1);
-    }
-    return { accounts, categories };
-  }, [dataset, range]);
-
-  const isDefault = filters.preset === DEFAULT_PRESET && filters.type === "all" && !filters.accounts.length && !filters.categories.length;
-
-  const onSliceClick = (s: Slice) => {
-    if (s.categoryId) focusCategory(s.categoryId);
-    else if (!s.id.startsWith("m:__")) showMerchant(s.label);
+  const go = (id: string) => {
+    navigate(id);
+    onClose();
   };
-
-  const rangeText = fmtRange(range.from, range.to);
-  const compareText = comparable ? compareLabel(filters.preset, range) : "No earlier data to compare";
-
-  const donut = drillCategory
-    ? {
-        title: `${CATEGORIES[drillCategory].label} by merchant`,
-        subtitle: "Click a merchant to see its transactions",
-        center: CATEGORIES[drillCategory].label,
-        drill: { label: "All categories", onBack: () => setCategories(filters.categories.filter((c) => c !== drillCategory)) },
-      }
-    : focus === "expense"
-      ? { title: "Spending breakdown", subtitle: "Share of spending by category", center: "Total spent", drill: null }
-      : { title: "Income sources", subtitle: "Share of income by source", center: "Total income", drill: null };
-
   return (
-    <div className="min-h-screen">
-      <Header />
-
-      <main className="mx-auto max-w-[1440px] px-4 pb-10 sm:px-6 lg:px-8">
-        <div className="animate-fade-in flex flex-col gap-2 pt-6 pb-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{greeting()}, Alex</p>
-            <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px] dark:text-white">Your money at a glance</h1>
-          </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            <span className="font-medium text-slate-700 dark:text-slate-200">{presetLabel(filters.preset)}</span>
-            <span className="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
-            {rangeText}
-            <span className="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
-            {pluralize(days, "day")}
-          </p>
-        </div>
-
-        <FilterBar
-          filters={filters}
-          dataStart={dataStart}
-          today={today}
-          counts={counts}
-          isDefault={isDefault}
-          onPreset={setPreset}
-          onRange={setRange}
-          onType={setType}
-          onAccounts={setAccounts}
-          onCategories={setCategories}
-          onReset={reset}
+    <Modal title="Find a little clarity" sub="Search transactions or jump to a page." onClose={onClose}>
+      <div className="search-field palette-search">
+        <Search size={19} />
+        <input
+          autoFocus
+          aria-label="Search workspace"
+          placeholder="Try a merchant, a note, or “goals”…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
         />
-
-        <div className="mt-1 space-y-4 sm:space-y-5">
-          <section aria-label="Key metrics" className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-4">
-            {kpis.map((k, i) => (
-              <KpiCard key={k.id} spec={k} compareText={compareText} index={i} />
-            ))}
-          </section>
-
-          <div className="grid gap-4 sm:gap-5 lg:grid-cols-3">
-            <CashFlowChart
-              className="lg:col-span-2"
-              series={series}
-              totals={totals}
-              mode={mode}
-              granularity={granularity}
-              allowed={allowed}
-              onGranularity={setGranOverride}
-              onReset={reset}
-            />
-            <CategoryDonut
-              slices={slices}
-              title={donut.title}
-              subtitle={donut.subtitle}
-              centerLabel={donut.center}
-              drill={donut.drill}
-              onSliceClick={onSliceClick}
-              onReset={reset}
-            />
+      </div>
+      <div className="command-results">
+        {destinations.length > 0 && <span className="eyebrow">JUMP TO</span>}
+        {destinations.map((p) => (
+          <button key={p.id} onClick={() => go(p.id)}>
+            <p.icon size={17} />
+            <span>{p.label}</span>
+            <ArrowUpRight size={14} />
+          </button>
+        ))}
+        {transactions.length > 0 && <span className="eyebrow">MONEY MOMENTS</span>}
+        {transactions.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => {
+              onClose();
+              onEdit(t);
+            }}
+          >
+            <ArrowDownUp size={16} />
+            <span>
+              {t.merchant}
+              <small>{t.date}</small>
+            </span>
+            <strong>{money(t.amount, true)}</strong>
+          </button>
+        ))}
+        {q && !destinations.length && !transactions.length && (
+          <p className="search-empty">Nothing found. Try another merchant, note, or page name.</p>
+        )}
+      </div>
+      <div className="palette-foot">
+        <span>
+          <kbd>esc</kbd> to close
+        </span>
+        <span>
+          Your data never leaves this device
+          <ShieldCheck size={12} />
+        </span>
+      </div>
+    </Modal>
+  );
+}
+function WorkspaceApp() {
+  const { w, storageError, notify } = useFinance();
+  const { isDark, toggle } = useTheme();
+  const [page, setPage] = useState(getPage);
+  const [month, setMonth] = useState(monthKey());
+  const [online, setOnline] = useState(navigator.onLine);
+  const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [search, setSearch] = useState(false);
+  const [help, setHelp] = useState(false);
+  const [transaction, setTransaction] = useState<{ entry?: Entry; draft?: Partial<Entry> } | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const navigate = (id: string) => {
+    setPage(id);
+    window.location.hash = id;
+    setMobileOpen(false);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+  useEffect(() => {
+    const onOnline = () => setOnline(navigator.onLine);
+    const onInstall = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as InstallPrompt);
+    };
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOnline);
+    window.addEventListener('beforeinstallprompt', onInstall);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOnline);
+      window.removeEventListener('beforeinstallprompt', onInstall);
+    };
+  }, []);
+  useEffect(() => {
+    const onHash = () => {
+      setPage(getPage());
+      setMobileOpen(false);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearch((s) => !s);
+        return;
+      }
+      if (e.key === 'Escape') setMobileOpen(false);
+      const target = e.target as HTMLElement;
+      if (target.closest('input, textarea, select, dialog') || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setTransaction({});
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  useEffect(() => {
+    document.title = `Spendwise · ${page === 'settings' ? 'Settings' : (pages.find((p) => p.id === page)?.label ?? 'Overview')}`;
+  }, [page]);
+  const currentPage = pages.find((p) => p.id === page);
+  const onEdit = (t: Entry) => setTransaction({ entry: t });
+  const due = w.bills.filter(
+    (b) => new Date(`${b.nextDue}T12:00:00`).getTime() <= Date.now() + 7 * 86400000,
+  ).length;
+  const monthOptions = [
+    ...new Set([
+      monthKey(),
+      ...w.transactions.map((t) => t.date.slice(0, 7)),
+      ...Array.from({ length: 6 }, (_, i) =>
+        monthKey(new Date(new Date().getFullYear(), new Date().getMonth() - i, 1)),
+      ),
+    ]),
+  ]
+    .sort()
+    .reverse();
+  const title =
+    page === 'overview'
+      ? `Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, ${w.profile.name}`
+      : page === 'settings'
+        ? 'Your little corner'
+        : currentPage?.label;
+  return (
+    <div className="spendwise">
+      <a
+        className="skip-link"
+        href="#workspace-content"
+        onClick={(e) => {
+          e.preventDefault();
+          mainRef.current?.focus();
+        }}
+      >
+        Skip to content
+      </a>
+      <aside className="sidebar">
+        <button className="brand" onClick={() => navigate('overview')} aria-label="Spendwise home">
+          <span>
+            <Sprout size={25} strokeWidth={1.8} />
+          </span>
+          <strong>
+            spendwise<span>®</span>
+          </strong>
+        </button>
+        <div className="workspace-switch">
+          <span className="workspace-avatar">{w.profile.name.slice(0, 1).toUpperCase()}</span>
+          <div>
+            <strong>Personal workspace</strong>
+            <small>{w.demo ? 'Exploring with demo data' : 'A little more intentional'}</small>
           </div>
-
-          <div className="grid gap-4 sm:gap-5 lg:grid-cols-3">
-            <CategoryBars className="lg:col-span-2" series={series} focus={focus} granularity={granularity} onCategoryClick={focusCategory} onReset={reset} />
-            <WeekdayChart stats={weekdays} focus={focus} onReset={reset} />
+          <Leaf size={14} />
+        </div>
+        <nav aria-label="Main navigation">
+          {pages.map((p) => (
+            <div key={p.id}>
+              {p.group && <span className="nav-heading">{p.group}</span>}
+              <button
+                className={`nav-link ${page === p.id ? 'active' : ''}`}
+                aria-current={page === p.id ? 'page' : undefined}
+                onClick={() => navigate(p.id)}
+              >
+                <p.icon size={18} strokeWidth={1.7} />
+                <span>{p.label}</span>
+                {p.id === 'lab' && <small className="new-badge">NEW</small>}
+                {p.id === 'bills' && due > 0 && <small className="nav-count">{due}</small>}
+              </button>
+            </div>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <div className="sidebar-inspiration">
+            <Flower2 size={27} strokeWidth={1.5} />
+            <strong>Good things take a little growing.</strong>
+            <p>Give your next chapter a head start.</p>
+            <button onClick={() => navigate('goals')}>
+              Plant a savings goal
+              <ArrowUpRight size={14} />
+            </button>
           </div>
-
-          <div className="grid gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
-            <BudgetList rows={budgets} available={mode !== "income"} onCategoryClick={focusCategory} />
-            <TopMerchants rows={merchants} focus={focus} onSelect={showMerchant} onReset={reset} />
-            <Insights className="md:col-span-2 xl:col-span-1" items={insights} />
-          </div>
-
-          <div ref={tableRef} className="scroll-mt-20 lg:scroll-mt-48">
-            <TransactionsTable
-              transactions={current}
-              query={query}
-              onQueryChange={setQuery}
-              onCategoryClick={focusCategory}
-              onReset={reset}
-              subtitle={`${presetLabel(filters.preset)} · ${rangeText}`}
-            />
+          <button
+            className={`nav-link ${page === 'settings' ? 'active' : ''}`}
+            onClick={() => navigate('settings')}
+            aria-current={page === 'settings' ? 'page' : undefined}
+          >
+            <SettingsIcon size={18} />
+            <span>Settings</span>
+          </button>
+          <button className="nav-link" onClick={() => setHelp(true)}>
+            <CircleHelp size={18} />
+            <span>A little help</span>
+            <ArrowUpRight size={14} />
+          </button>
+          <div className="local-status">
+            <span className={storageError ? 'error-dot' : 'status-dot'} />
+            {storageError ? 'Storage needs attention' : 'Saved on this device'}
+            <HardDrive size={12} />
           </div>
         </div>
-
-        <footer className="mt-10 flex flex-col items-center justify-between gap-2 border-t border-slate-200 pt-6 text-center text-xs text-slate-400 sm:flex-row sm:text-left dark:border-slate-800 dark:text-slate-500">
-          <p>© {today.getFullYear()} Spendwise · Demo data generated locally — no real accounts connected.</p>
-          <p className="tabular-nums">
-            {fmtInt(dataset.transactions.length)} transactions · {fmtDate(dataStart)} – {fmtDate(today)}
-          </p>
-        </footer>
-      </main>
+      </aside>
+      <div className="workspace-body">
+        <header className="workspace-header">
+          <div className="breadcrumb">
+            <button
+              className="icon-button mobile-menu"
+              aria-label="Open navigation"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu size={21} />
+            </button>
+            <span className="desktop-only">My workspace</span>
+            <ChevronRight size={13} className="desktop-only" />
+            <strong>{page === 'settings' ? 'Settings' : currentPage?.label}</strong>
+          </div>
+          <div className="header-actions">
+            <button className="header-search" aria-label="Search workspace" onClick={() => setSearch(true)}>
+              <Search size={16} />
+              <span>Find anything…</span>
+              <kbd>
+                <Command size={10} /> K
+              </kbd>
+            </button>
+            <button
+              className="icon-button"
+              onClick={toggle}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <span className="header-divider" />
+            <button
+              className="profile-avatar"
+              onClick={() => navigate('settings')}
+              aria-label="Open profile settings"
+            >
+              {w.profile.name.slice(0, 1).toUpperCase()}
+            </button>
+          </div>
+        </header>
+        <main id="workspace-content" ref={mainRef} tabIndex={-1} className="workspace-main">
+          {!online && (
+            <div className="offline-banner" role="status">
+              <HardDrive size={15} />
+              <span>You’re offline. Your records still work here and save on this device.</span>
+            </div>
+          )}
+          {storageError && (
+            <div role="alert" className="storage-banner">
+              Browser storage needs attention. Download a backup before leaving.{' '}
+              <button onClick={() => navigate('settings')}>
+                Manage data
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          )}
+          <div className="page-heading">
+            <div>
+              {page === 'overview' && (
+                <span className="eyebrow heading-eyebrow">
+                  <span className="tiny-dot" />
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </span>
+              )}
+              <h1>
+                {title}
+                {page === 'overview' && <span className="greeting-leaf">✳</span>}
+              </h1>
+              <p>{page === 'settings' ? 'Make Spendwise feel a little more like you.' : currentPage?.sub}</p>
+            </div>
+            <div className="heading-actions">
+              {['overview', 'budgets', 'insights'].includes(page) && (
+                <div className="month-picker">
+                  <CalendarDays size={15} />
+                  <select
+                    aria-label="Selected month"
+                    value={month}
+                    onChange={(e) => setMonth(e.target.value)}
+                  >
+                    {monthOptions.map((m) => (
+                      <option key={m} value={m}>
+                        {new Date(`${m}-02`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={13} />
+                </div>
+              )}
+              <button className="button add-button" onClick={() => setTransaction({})}>
+                <Plus size={17} />
+                <span>Add transaction</span>
+              </button>
+            </div>
+          </div>
+          {page === 'overview' && <Overview month={month} navigate={navigate} onEdit={onEdit} />}
+          {page === 'transactions' && <Transactions onEdit={onEdit} onAdd={() => setTransaction({})} />}
+          {page === 'accounts' && <Accounts />}
+          {page === 'budgets' && <Budgets month={month} />}
+          {page === 'goals' && <Goals />}
+          {page === 'bills' && <Bills />}
+          {page === 'insights' && <Insights month={month} onEdit={onEdit} navigate={navigate} />}
+          {page === 'lab' && <Lab onCapture={(draft) => setTransaction({ draft })} />}
+          {page === 'settings' && <Settings key={`${w.demo}-${w.profile.name}-${w.profile.currency}`} />}
+          <footer className="workspace-footer">
+            <span>
+              <Sprout size={15} />
+              Made for a life well spent.
+            </span>
+            <div>
+              {installPrompt && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await installPrompt.prompt();
+                      const choice = await installPrompt.userChoice;
+                      if (choice.outcome === 'accepted') notify('Spendwise is ready for your home screen.');
+                    } finally {
+                      setInstallPrompt(null);
+                    }
+                  }}
+                >
+                  Install Spendwise
+                  <Plus size={12} />
+                </button>
+              )}
+              {w.demo && (
+                <button onClick={() => navigate('settings')}>
+                  Demo workspace
+                  <ArrowUpRight size={11} />
+                </button>
+              )}
+              <span>
+                <ShieldCheck size={12} />
+                Local-first. Always yours.
+              </span>
+              <span>Spendwise © {new Date().getFullYear()}</span>
+            </div>
+          </footer>
+        </main>
+      </div>
+      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+        {[pages[0], pages[1], pages[3], pages[7]].map((p) => (
+          <button
+            className={page === p.id ? 'active' : ''}
+            key={p.id}
+            onClick={() => navigate(p.id)}
+            aria-current={page === p.id ? 'page' : undefined}
+          >
+            <p.icon size={20} />
+            <span>{p.id === 'lab' ? 'Decision lab' : p.label}</span>
+          </button>
+        ))}
+        <button onClick={() => setMobileOpen(true)} aria-label="More pages">
+          <Menu size={20} />
+          <span>More</span>
+        </button>
+      </nav>
+      {mobileOpen && (
+        <Modal
+          title="Your workspace"
+          sub="A little room for every part of your plan."
+          onClose={() => setMobileOpen(false)}
+        >
+          <nav className="mobile-page-list" aria-label="All pages">
+            {[...pages, { id: 'settings', label: 'Settings', icon: SettingsIcon }].map((p) => (
+              <button className={page === p.id ? 'active' : ''} key={p.id} onClick={() => navigate(p.id)}>
+                <p.icon size={20} />
+                <span>{p.label}</span>
+                {page === p.id ? <Check size={16} /> : <ChevronRight size={16} />}
+              </button>
+            ))}
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                setHelp(true);
+              }}
+            >
+              <CircleHelp size={19} />
+              <span>A little help</span>
+              <ArrowUpRight size={16} />
+            </button>
+          </nav>
+        </Modal>
+      )}
+      {search && <SearchDialog onClose={() => setSearch(false)} navigate={navigate} onEdit={onEdit} />}
+      {transaction && (
+        <TransactionForm
+          entry={transaction.entry}
+          draft={transaction.draft}
+          onClose={() => setTransaction(null)}
+        />
+      )}
+      {help && (
+        <Modal
+          title="A little help goes a long way"
+          sub="Welcome to a more intentional relationship with money."
+          onClose={() => setHelp(false)}
+          wide
+        >
+          <div className="help-grid">
+            <div>
+              <span>01</span>
+              <h3>Make it your own</h3>
+              <p>
+                Explore the demo, then start an empty workspace in Settings. Set your income plan and account
+                opening balances.
+              </p>
+            </div>
+            <div>
+              <span>02</span>
+              <h3>Capture the little things</h3>
+              <p>
+                Add income and expenses. Try Quick capture: “Coffee 6.50 yesterday”. Review the suggested
+                details before saving.
+              </p>
+            </div>
+            <div>
+              <span>03</span>
+              <h3>Give your money direction</h3>
+              <p>
+                Set monthly category budgets, create savings goals, and schedule your bills. Goals are
+                earmarks, not account transfers.
+              </p>
+            </div>
+            <div>
+              <span>04</span>
+              <h3>Make a thoughtful choice</h3>
+              <p>
+                Use the Decision Lab to preview a purchase, see its work-hour cost, or save it in your 24-hour
+                pause pocket.
+              </p>
+            </div>
+            <div>
+              <span>05</span>
+              <h3>Take your data with you</h3>
+              <p>
+                Download a full JSON backup in Settings. Export filtered transactions as CSV. Backups can be
+                restored on another device.
+              </p>
+            </div>
+            <div>
+              <span>⌘</span>
+              <h3>Little shortcuts</h3>
+              <p>
+                <kbd>Ctrl / ⌘ K</kbd> Search your workspace
+                <br />
+                <kbd>N</kbd> New transaction
+                <br />
+                <kbd>Esc</kbd> Close a dialog
+              </p>
+            </div>
+          </div>
+          <div className="info-note">
+            <ShieldCheck size={19} />
+            <p>
+              No banks are connected. There is no cloud sync, sign-in, or automatic bill payment. Records live
+              in this browser; clearing storage removes them. Keep backups and use a trusted device.
+            </p>
+          </div>
+          <div className="form-actions">
+            <button className="button" onClick={() => setHelp(false)}>
+              I’ve got this
+              <Sparkles size={15} />
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
-
 export default function App() {
   return (
     <ThemeProvider>
-      <Dashboard />
+      <FinanceProvider>
+        <WorkspaceApp />
+      </FinanceProvider>
     </ThemeProvider>
   );
 }

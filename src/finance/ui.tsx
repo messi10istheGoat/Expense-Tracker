@@ -1,0 +1,202 @@
+import { useEffect, useId, useRef, type ReactNode } from 'react';
+import {
+  ArrowUpRight,
+  Car,
+  GraduationCap,
+  Heart,
+  House,
+  Inbox,
+  Landmark,
+  Laptop,
+  Plane,
+  Sprout,
+  X,
+} from 'lucide-react';
+import { CATEGORIES } from '../lib/categories';
+import type { CategoryId } from '../lib/types';
+
+export function Panel({
+  title,
+  sub,
+  action,
+  children,
+  className = '',
+}: {
+  title?: string;
+  sub?: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`sw-panel ${className}`}>
+      {title && (
+        <div className="panel-head">
+          <div>
+            <h2>{title}</h2>
+            {sub && <p>{sub}</p>}
+          </div>
+          {action}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+export function LinkButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+  return (
+    <button className="text-button" onClick={onClick}>
+      {children}
+      <ArrowUpRight size={15} />
+    </button>
+  );
+}
+export function Empty({ title, text, action }: { title: string; text: string; action?: ReactNode }) {
+  return (
+    <div className="sw-empty">
+      <span>
+        <Inbox size={26} />
+      </span>
+      <h3>{title}</h3>
+      <p>{text}</p>
+      {action}
+    </div>
+  );
+}
+export function CategoryIcon({ id, size = 18 }: { id: CategoryId; size?: number }) {
+  const c = CATEGORIES[id];
+  const Icon = c.icon;
+  return (
+    <span className="category-icon" style={{ background: `${c.color}16`, color: c.color }}>
+      <Icon size={size} />
+    </span>
+  );
+}
+export function Progress({ value, color = 'var(--green)' }: { value: number; color?: string }) {
+  return (
+    <div
+      className="sw-progress"
+      role="progressbar"
+      aria-valuenow={Math.round(Math.min(100, Math.max(0, value)))}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label="Progress"
+    >
+      <div style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: color }} />
+    </div>
+  );
+}
+let modalDepth = 0;
+let previousOverflow = '';
+export function Modal({
+  title,
+  sub,
+  onClose,
+  children,
+  wide = false,
+}: {
+  title: string;
+  sub?: string;
+  onClose: () => void;
+  children: ReactNode;
+  wide?: boolean;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  useEffect(() => {
+    const d = ref.current!;
+    d.showModal();
+    if (modalDepth++ === 0) {
+      previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      d.close();
+      if (--modalDepth === 0) document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className={`sw-modal ${wide ? 'wide' : ''}`}
+      aria-labelledby={titleId}
+      onCancel={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="modal-inner">
+        <div className="modal-head">
+          <div>
+            <h2 id={titleId}>{title}</h2>
+            {sub && <p>{sub}</p>}
+          </div>
+          <button className="icon-button" aria-label="Close dialog" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+        {children}
+      </div>
+    </dialog>
+  );
+}
+export function Confirm({
+  title,
+  text,
+  action,
+  onClose,
+  onConfirm,
+}: {
+  title: string;
+  text: string;
+  action: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal title={title} onClose={onClose}>
+      <p className="muted leading-copy">{text}</p>
+      <div className="form-actions">
+        <button className="button secondary" onClick={onClose}>
+          Keep it
+        </button>
+        <button
+          className="button danger"
+          onClick={() => {
+            onConfirm();
+            onClose();
+          }}
+        >
+          {action}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+export const dateLabel = (s: string, year = false) =>
+  new Date(`${s}T12:00:00`).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(year ? { year: 'numeric' } : {}),
+  });
+
+export function GoalGlyph({ emoji }: { emoji: string }) {
+  const Icon =
+    (
+      {
+        '🌱': Sprout,
+        '⛩️': Plane,
+        '💻': Laptop,
+        '🏡': House,
+        '✈️': Plane,
+        '🚗': Car,
+        '🎓': GraduationCap,
+        '💛': Heart,
+      } as Record<string, typeof Sprout>
+    )[emoji] ?? Landmark;
+  return <Icon size={22} strokeWidth={1.65} />;
+}

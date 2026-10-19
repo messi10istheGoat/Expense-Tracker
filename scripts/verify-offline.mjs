@@ -1,0 +1,93 @@
+// Integration check against the built app at its actual GitHub Pages subpath.
+// Run npm run build first. Install Chromium with npx playwright install chromium.
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { chromium } from 'playwright';
+const base = '/Expense-Tracker/';
+const dist = path.resolve('dist');
+const server = createServer(async (req, res) => {
+  const url = new URL(req.url, 'http://localhost');
+  const name = decodeURIComponent(url.pathname).slice(base.length) || 'index.html';
+  const file = path.resolve(dist, name);
+  if (!url.pathname.startsWith(base) || !file.startsWith(`${dist}${path.sep}`)) {
+    res.writeHead(404);
+    res.end();
+    return;
+  }
+  try {
+    const mime =
+      {
+        '.html': 'text/html',
+        '.js': 'text/javascript',
+        '.png': 'image/png',
+        '.svg': 'image/svg+xml',
+        '.webmanifest': 'application/manifest+json',
+      }[path.extname(file)] || 'application/octet-stream';
+    res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-store' });
+    res.end(await readFile(file));
+  } catch {
+    res.writeHead(404);
+    res.end();
+  }
+});
+await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+const root = `http://127.0.0.1:${server.address().port}${base}`;
+let browser;
+try {
+  browser = await chromium.launch({
+    executablePath: process.env.CHROMIUM_EXECUTABLE || undefined,
+    args: [
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+      '--use-angle=swiftshader',
+      '--enable-unsafe-swiftshader',
+    ],
+  });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const errors = [];
+  const external = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('request', (req) => {
+    if (!req.url().startsWith(root) && !req.url().startsWith('data:')) external.push(req.url());
+  });
+  await page.goto(root);
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+  });
+  await page.reload();
+  assert(
+    await page.evaluate(() => !!navigator.serviceWorker.controller),
+    'Service worker must control the page',
+  );
+  await context.setOffline(true);
+  await page.reload();
+  await page.getByRole('button', { name: 'Add transaction', exact: true }).click();
+  await page.getByLabel('Merchant or description').fill('Offline groceries');
+  await page
+    .getByRole('dialog')
+    .getByLabel(/Amount \(/)
+    .fill('12.25');
+  await page.getByRole('dialog').getByRole('button', { name: 'Add transaction', exact: true }).click();
+  await page.reload();
+  assert(
+    await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('spendwise-workspace-v1')).transactions.some(
+        (t) => t.merchant === 'Offline groceries' && t.amount === 12.25,
+      ),
+    ),
+    'Offline edits must persist',
+  );
+  assert.equal(await page.getByRole('heading', { name: /Good / }).count(), 1);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(external, [], 'The production app must not request external fonts or services');
+  console.log(
+    'PASS: production subpath, service worker control, offline reload, offline transaction persistence, and no third-party requests.',
+  );
+} finally {
+  if (browser) await browser.close();
+  server.closeAllConnections();
+  await new Promise((resolve) => server.close(resolve));
+}
