@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "Spendwise — A life well spent",
+  "short_name": "Spendwise",
+  "description": "A calmer, private way to track expenses, plan your budget, and make room for what matters.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f8f5",
+  "theme_color": "#24593f",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
