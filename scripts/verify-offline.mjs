@@ -80,11 +80,27 @@ try {
     ),
     'Offline edits must persist',
   );
+  const financialRecords = await page.evaluate(() => localStorage.getItem('spendwise-workspace-v1'));
+  await page.getByRole('button', { name: 'Open Style Studio' }).click();
+  const studio = page.getByRole('dialog', { name: 'Style Studio', exact: true });
+  await studio.getByRole('radio', { name: 'Neon theme' }).check();
+  await studio.getByRole('button', { name: 'After hours', exact: false }).click();
+  await studio.getByRole('button', { name: 'Larger', exact: true }).click();
+  await studio.getByRole('button', { name: 'Close dialog' }).click();
+  await page.reload();
+  assert.equal(await page.locator('html').getAttribute('data-style'), 'neon');
+  assert.equal(await page.locator('html').getAttribute('data-text-size'), 'large');
+  assert(await page.locator('html').evaluate((root) => root.classList.contains('dark')));
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem('spendwise-workspace-v1')),
+    financialRecords,
+    'Offline appearance changes must not modify financial records',
+  );
   assert.equal(await page.getByRole('heading', { name: /Good / }).count(), 1);
   assert.deepEqual(errors, []);
   assert.deepEqual(external, [], 'The production app must not request external fonts or services');
   console.log(
-    'PASS: production subpath, service worker control, offline reload, offline transaction persistence, and no third-party requests.',
+    'PASS: production subpath, service worker control, offline reload, offline transaction/appearance persistence, and no third-party requests.',
   );
 } finally {
   if (browser) await browser.close();

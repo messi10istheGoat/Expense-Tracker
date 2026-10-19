@@ -15,9 +15,24 @@ A responsive, local-first expense tracker for desktop and mobile. Built with Rea
 - **Decision Lab:** preview a purchase’s effect on planned spending room, see its take-home work-hour cost, compare an alternative savings allocation, and simulate smaller discretionary spending.
 - **Pause pocket:** keep possible purchases in a persistent wishlist with a 24-hour reflection window. Nothing prevents you from deciding sooner; this is a nudge, not a lock.
 - **Data ownership:** validated JSON backup/restore, CSV export, cross-tab workspace updates, and explicit empty/demo workspace choices.
-- **Personalization:** name, planned take-home income, hourly rate, five currency display options, and persistent light/dark themes.
+- **Personalization:** name, planned take-home income, hourly rate, five currency display options, four persistent visual styles, light/dark/device color modes, and a larger reading size.
 - **Responsive navigation:** desktop sidebar, mobile bottom navigation, global search (`Ctrl/⌘ K`), new transaction shortcut (`N`), native focus-trapped dialogs, and reduced-motion support.
 - **Installable app:** web manifest and app icons; the production service worker caches the single-file app shell so it can reopen offline after a successful online visit.
+
+## Choose your look
+
+Open **Style Studio** in the header (the palette icon on small screens), or visit **Settings → Style Studio**. Changes preview immediately across the whole app.
+
+| Style     | Personality                                                   | Modes        |
+| --------- | ------------------------------------------------------------- | ------------ |
+| Minimal   | White/neutral surfaces, electric blue, crisp typography       | Light + dark |
+| Botanical | The original warm cream and forest-green Spendwise            | Light + dark |
+| Brutalist | Bold outlines, square corners, offset shadows, yellow accents | Light + dark |
+| Neon      | Violet/mint accents, layered surfaces, luminous dark details  | Light + dark |
+
+Choose **Use device** to follow your system appearance, or pick a fixed mode. The header sun/moon button switches modes without changing your style. **Larger** increases body text, labels, and chart text. Preferences survive reloads and synchronize across tabs on the same origin; they never modify financial records or JSON backups. Returning users with the old light/dark preference retain Botanical. New installs start with Minimal and follow the device.
+
+The refreshed layouts use clearer headings, higher-contrast secondary text, consistent form sizing, and responsive cards/tables across all nine pages. Hover, press, progress, modal, and financial-value feedback respect reduced-motion preferences. See [appearance design notes](docs/APPEARANCE.md) for the reference links and implementation details.
 
 ## Start developing
 
@@ -34,10 +49,10 @@ The development server binds to `0.0.0.0` and permits Arena preview domains. The
 ## Build and test
 
 ```sh
-npm test                          # Financial, date, parser, and backup unit tests
+npm test                          # Finance, backup, and appearance unit tests
 npm run build                     # TypeScript checks + production build
 npx playwright install chromium  # One-time browser installation
-npm run test:e2e                   # Desktop Chrome + mobile Chromium workflows
+npm run test:e2e                   # Desktop/mobile workflows, themes, and axe checks
 npm run test:offline               # Built app at /Expense-Tracker/, offline edits and reload
 npm run preview                    # Preview the production site
 ```
@@ -89,9 +104,11 @@ Never commit `node_modules/`, `dist/`, or generated test artifacts.
 
 - `src/finance/model.ts`: data model, backup validation/migration, financial/date helpers, CSV and quick-entry logic.
 - `src/finance/store.tsx`: local persistence, storage failure reporting, currency display, notifications, cross-tab updates.
-- `src/finance/`: the nine application sections, shared dialogs, and responsive styling.
+- `src/finance/`: the nine application sections and shared dialogs.
+- `src/finance/appearance.ts`, `ThemeStudio.tsx`, `src/hooks/useTheme.tsx`: appearance preferences, migration, chooser, and provider.
+- `src/finance/styles/`: semantic palettes, base typography, layout, components, page styles, appearance treatments, and reduced-motion-aware interactions (imported by `spendwise.css`).
 - `src/lib/data.ts`: deterministic demo-data generator.
 - `public/`: install metadata, icons, and the production offline shell worker.
-- `tests/`: desktop and mobile browser workflows.
+- `tests/`: desktop/mobile finance workflows, eight-palette accessibility checks, appearance persistence, keyboard controls, system mode, and cross-tab tests.
 - `scripts/verify-offline.mjs`: real subpath/offline production verification.
 - `docs/PRODUCT.md`: research notes, product choices, and deliberate boundaries.

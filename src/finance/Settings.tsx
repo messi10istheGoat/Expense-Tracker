@@ -8,20 +8,17 @@ import {
   Globe2,
   HardDrive,
   LockKeyhole,
-  Moon,
   RotateCcw,
   ShieldCheck,
-  Sun,
   Upload,
 } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
+import { ThemeStudio } from './ThemeStudio';
 import { download, iso, makeWorkspace, STORAGE_KEY, validateWorkspace, type Workspace } from './model';
 import { useFinance } from './store';
 import { Confirm, Modal, Panel } from './ui';
 
 export function Settings() {
   const { w, update, notify, storageError } = useFinance();
-  const { isDark, toggle } = useTheme();
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<Workspace | null>(null);
   const [error, setError] = useState('');
@@ -61,6 +58,9 @@ export function Settings() {
   };
   return (
     <div className="page-stack settings-page">
+      <Panel className="appearance-panel">
+        <ThemeStudio />
+      </Panel>
       <Panel title="Make yourself at home" sub="A few details to make your plan more useful.">
         <form className="settings-form" onSubmit={save}>
           <div className="form-grid">
@@ -125,32 +125,6 @@ export function Settings() {
             Save preferences
           </button>
         </form>
-      </Panel>
-      <Panel title="A view that feels like you" sub="A little easier on the eyes, day or night.">
-        <div className="theme-options">
-          <button
-            className={!isDark ? 'selected' : ''}
-            onClick={() => {
-              if (isDark) toggle();
-            }}
-          >
-            <Sun size={24} />
-            <strong>Light & airy</strong>
-            <span>A fresh perspective</span>
-            {!isDark && <Check size={17} />}
-          </button>
-          <button
-            className={isDark ? 'selected' : ''}
-            onClick={() => {
-              if (!isDark) toggle();
-            }}
-          >
-            <Moon size={24} />
-            <strong>After hours</strong>
-            <span>A little softer at night</span>
-            {isDark && <Check size={17} />}
-          </button>
-        </div>
       </Panel>
       <div className="info-note">
         <HardDrive size={19} />

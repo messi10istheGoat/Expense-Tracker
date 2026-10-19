@@ -14,7 +14,7 @@ import { iso, monthKey, totals, type Entry } from './model';
 import { useFinance } from './store';
 import { dateLabel, Empty, Panel } from './ui';
 import { SpendingChart } from './Overview';
-import { useTheme } from '../hooks/useTheme';
+import { useChartColors } from '../hooks/useTheme';
 
 export function Insights({
   month,
@@ -26,7 +26,7 @@ export function Insights({
   navigate: (page: string) => void;
 }) {
   const { w, money } = useFinance();
-  const { isDark } = useTheme();
+  const colors = useChartColors();
   const rows = w.transactions.filter((t) => t.date.startsWith(month));
   const sum = totals(rows);
   const merchants = new Map<string, Entry[]>();
@@ -164,21 +164,17 @@ export function Insights({
           <div className="report-chart" role="img" aria-label="Six-month income and expense comparison">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data} barGap={6} margin={{ left: -10, right: 5 }}>
-                <CartesianGrid
-                  vertical={false}
-                  stroke={isDark ? '#34433d' : '#e9eeea'}
-                  strokeDasharray="3 4"
-                />
+                <CartesianGrid vertical={false} stroke={colors.grid} strokeDasharray="3 4" />
                 <XAxis
                   dataKey="month"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 12, fill: '#91a096' }}
+                  tick={{ fontSize: colors.fontSize, fill: colors.axis }}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#91a096' }}
+                  tick={{ fontSize: colors.fontSize, fill: colors.axis }}
                   tickFormatter={(v) => `${v / 1000}k`}
                 />
                 <Tooltip
@@ -187,20 +183,21 @@ export function Insights({
                     background: 'var(--surface)',
                     border: '1px solid var(--border)',
                     borderRadius: 10,
-                    fontSize: 12,
+                    fontSize: 13,
+                    color: 'var(--text)',
                   }}
                 />
                 <Bar
                   isAnimationActive={false}
                   dataKey="Income"
-                  fill="#347c60"
+                  fill={colors.income}
                   radius={[4, 4, 0, 0]}
                   maxBarSize={27}
                 />
                 <Bar
                   isAnimationActive={false}
                   dataKey="Expenses"
-                  fill="#c5d4af"
+                  fill={colors.expenses}
                   radius={[4, 4, 0, 0]}
                   maxBarSize={27}
                 />
@@ -231,6 +228,7 @@ export function Insights({
             {dates.map((d) => (
               <div
                 key={d.date}
+                role="img"
                 tabIndex={0}
                 title={`${dateLabel(d.date, true)}: ${money(d.total, true)} spent${activeDates.has(d.date) ? '' : ' · no records'}`}
                 aria-label={`${dateLabel(d.date, true)}: ${money(d.total, true)} spent${activeDates.has(d.date) ? '' : ', no records'}`}
@@ -239,12 +237,12 @@ export function Insights({
                     d.total === 0
                       ? 'var(--surface-alt)'
                       : d.total < 30
-                        ? '#dbe6d0'
+                        ? 'var(--heatmap-1)'
                         : d.total < 100
-                          ? '#abc7a8'
+                          ? 'var(--heatmap-2)'
                           : d.total < 300
-                            ? '#689a74'
-                            : '#2b694d',
+                            ? 'var(--heatmap-3)'
+                            : 'var(--heatmap-4)',
                 }}
               />
             ))}
@@ -253,10 +251,10 @@ export function Insights({
         <div className="heatmap-foot">
           <span>Blank days mean no logged expenses—not proof of a no-spend day.</span>
           <span>
-            Less <i style={{ background: '#dbe6d0' }} />
-            <i style={{ background: '#abc7a8' }} />
-            <i style={{ background: '#689a74' }} />
-            <i style={{ background: '#2b694d' }} /> More
+            Less <i style={{ background: 'var(--heatmap-1)' }} />
+            <i style={{ background: 'var(--heatmap-2)' }} />
+            <i style={{ background: 'var(--heatmap-3)' }} />
+            <i style={{ background: 'var(--heatmap-4)' }} /> More
           </span>
         </div>
       </Panel>

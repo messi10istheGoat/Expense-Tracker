@@ -28,13 +28,13 @@ import {
 import { CATEGORIES, EXPENSE_CATEGORIES } from '../lib/categories';
 import { balance, iso, monthKey, plan, totals, type Entry } from './model';
 import { useFinance } from './store';
-import { CategoryIcon, dateLabel, Empty, GoalGlyph, LinkButton, Panel, Progress } from './ui';
+import { AnimatedValue, CategoryIcon, dateLabel, Empty, GoalGlyph, LinkButton, Panel, Progress } from './ui';
 import { TransactionRows } from './Transactions';
-import { useTheme } from '../hooks/useTheme';
+import { useChartColors } from '../hooks/useTheme';
 
 export function CashChart({ month }: { month: string }) {
   const { w, money } = useFinance();
-  const { isDark } = useTheme();
+  const colors = useChartColors();
   const rows = w.transactions.filter((t) => t.date.startsWith(month));
   const [y, m] = month.split('-').map(Number);
   const days = new Date(y, m, 0).getDate();
@@ -57,21 +57,21 @@ export function CashChart({ month }: { month: string }) {
         <AreaChart data={data} margin={{ top: 12, right: 8, left: -12, bottom: 0 }}>
           <defs>
             <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#347c60" stopOpacity={0.16} />
-              <stop offset="100%" stopColor="#347c60" stopOpacity={0} />
+              <stop offset="0%" stopColor={colors.income} stopOpacity={0.16} />
+              <stop offset="100%" stopColor={colors.income} stopOpacity={0} />
             </linearGradient>
             <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#b9c898" stopOpacity={0.18} />
-              <stop offset="100%" stopColor="#b9c898" stopOpacity={0} />
+              <stop offset="0%" stopColor={colors.expenses} stopOpacity={0.18} />
+              <stop offset="100%" stopColor={colors.expenses} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid vertical={false} stroke={isDark ? '#34433d' : '#e9eeea'} strokeDasharray="3 4" />
+          <CartesianGrid vertical={false} stroke={colors.grid} strokeDasharray="3 4" />
           <XAxis
             dataKey="day"
             axisLine={false}
             tickLine={false}
             minTickGap={35}
-            tick={{ fill: '#91a096', fontSize: 11 }}
+            tick={{ fill: colors.axis, fontSize: colors.fontSize }}
             tickFormatter={(v) =>
               `${new Date(y, m - 1).toLocaleDateString('en-US', { month: 'short' })} ${v}`
             }
@@ -79,7 +79,7 @@ export function CashChart({ month }: { month: string }) {
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: '#91a096', fontSize: 11 }}
+            tick={{ fill: colors.axis, fontSize: colors.fontSize }}
             tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : `${v}`)}
           />
           <Tooltip
@@ -97,7 +97,7 @@ export function CashChart({ month }: { month: string }) {
             isAnimationActive={false}
             type="monotone"
             dataKey="Income"
-            stroke="#347c60"
+            stroke={colors.income}
             strokeWidth={2.5}
             fill="url(#incomeFill)"
           />
@@ -105,7 +105,7 @@ export function CashChart({ month }: { month: string }) {
             isAnimationActive={false}
             type="monotone"
             dataKey="Expenses"
-            stroke="#b2be8e"
+            stroke={colors.expenses}
             strokeWidth={2.5}
             fill="url(#expenseFill)"
             strokeDasharray="5 4"
@@ -115,7 +115,7 @@ export function CashChart({ month }: { month: string }) {
     </div>
   );
 }
-const palette = ['#347c60', '#8dae91', '#c5d4af', '#d9b985', '#aaa0c2', '#ced3d0'];
+
 export function SpendingChart({
   month,
   onCategory,
@@ -124,6 +124,8 @@ export function SpendingChart({
   onCategory?: (category: string) => void;
 }) {
   const { w, money } = useFinance();
+  const colors = useChartColors();
+  const palette = colors.categories;
   const rows = w.transactions.filter((t) => t.date.startsWith(month) && t.type === 'expense');
   const sum = totals(rows).expense;
   const all = EXPENSE_CATEGORIES.map((id) => ({
@@ -243,7 +245,8 @@ export function Overview({
   const cards = [
     {
       label: 'Total balance',
-      value: money(balance(w)),
+      amount: balance(w),
+      format: money,
       icon: Wallet,
       note: 'Across your 4 manual accounts',
       type: 'neutral',
@@ -251,7 +254,8 @@ export function Overview({
     },
     {
       label: 'Income',
-      value: money(t.income),
+      amount: t.income,
+      format: money,
       icon: ArrowDownLeft,
       note: incomeChange
         ? `${incomeChange} ${t.income >= prev.income ? 'more' : 'less'} than prior period`
@@ -261,7 +265,8 @@ export function Overview({
     },
     {
       label: 'Expenses',
-      value: money(t.expense),
+      amount: t.expense,
+      format: money,
       icon: ArrowUpRight,
       note: expenseChange
         ? `${expenseChange} ${t.expense >= prev.expense ? 'more' : 'less'} than prior period`
@@ -271,7 +276,8 @@ export function Overview({
     },
     {
       label: 'Savings rate',
-      value: `${t.rate.toFixed(1)}%`,
+      amount: t.rate,
+      format: (value: number) => `${value.toFixed(1)}%`,
       icon: Target,
       note: t.income ? `${money(t.net)} net cash flow` : 'Add income to calculate your rate',
       type: t.rate >= 0 ? 'good' : 'warm',
@@ -296,7 +302,9 @@ export function Overview({
               <span>{c.label}</span>
               <c.icon size={17} />
             </div>
-            <strong className="metric-value">{c.value}</strong>
+            <strong className="metric-value">
+              <AnimatedValue value={c.amount} format={c.format} />
+            </strong>
             <div className="metric-bottom">
               <span className={c.type}>
                 {i === 1 || i === 2 ? (
@@ -314,7 +322,7 @@ export function Overview({
                 <path
                   d={`M${c.spark.map((v, j) => `${j * 8},${35 - v / 2.2}`).join(' L')}`}
                   fill="none"
-                  stroke={i === 2 ? '#b6a17e' : '#84ad92'}
+                  stroke={i === 2 ? 'var(--chart-expense)' : 'var(--chart-income)'}
                   strokeWidth="1.7"
                 />
               </svg>

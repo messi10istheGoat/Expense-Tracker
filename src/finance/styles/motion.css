@@ -1,0 +1,235 @@
+/* Motion explains state changes; it never blocks input or gates access to data. */
+.button,
+.icon-button,
+.text-button,
+.nav-link,
+.theme-choice,
+.studio-trigger,
+.mode-buttons > button,
+.reading-size button,
+.profile-avatar {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+.sw-panel,
+.metric-card,
+.breathing-card,
+.workspace-header,
+.sidebar,
+.lab-teaser {
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+.sw-progress > div {
+  transition:
+    width 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 220ms;
+}
+.button {
+  position: relative;
+  overflow: hidden;
+}
+.button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, #ffffff35, transparent 65%);
+  opacity: 0;
+  transform: scale(0.2);
+  pointer-events: none;
+  transition:
+    opacity 220ms,
+    transform 400ms;
+}
+.button:active::after {
+  opacity: 1;
+  transform: scale(2.2);
+}
+.button:not(:disabled):active,
+.icon-button:active,
+.theme-choice:active {
+  transform: translateY(1px) scale(0.985);
+}
+.page-stack {
+  animation: workspace-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.theme-radio > svg {
+  animation: check-enter 220ms ease-out both;
+}
+.studio-status > svg {
+  animation: check-enter 250ms ease-out both;
+}
+.sw-modal[open] .modal-inner {
+  animation: dialog-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.toast {
+  animation: toast-enter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.toast > span {
+  animation: check-enter 350ms 100ms both;
+}
+.header-actions > .icon-button > svg {
+  animation: icon-turn 240ms ease both;
+}
+.transaction-row,
+.upcoming-list > button,
+.detective-list > button,
+.command-results > button {
+  transition: background-color 160ms ease;
+}
+.transaction-row .category-icon,
+.mini-goals .goal-emoji,
+.upcoming-list .category-icon,
+.lab-teaser-icon {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.heatmap > div {
+  transition:
+    transform 120ms,
+    box-shadow 120ms;
+}
+.heatmap > div:focus-visible {
+  transform: scale(1.08);
+  outline-offset: 2px;
+}
+@keyframes workspace-enter {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes dialog-enter {
+  from {
+    opacity: 0.2;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes check-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-20deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes icon-turn {
+  from {
+    opacity: 0.5;
+    transform: rotate(-30deg) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .button:not(:disabled):hover {
+    filter: brightness(1.04);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px #00000012;
+  }
+  .button.secondary:not(:disabled):hover {
+    background: var(--surface-alt);
+    border-color: var(--green);
+  }
+  .icon-button:hover {
+    background: var(--green-light);
+    color: var(--green) !important;
+  }
+  .nav-link:not(.active):hover {
+    background: var(--surface-alt);
+    color: var(--text) !important;
+    transform: translateX(2px);
+  }
+  .theme-choice:hover {
+    transform: translateY(-3px);
+    border-color: var(--green);
+    box-shadow: var(--shadow-hover);
+  }
+  .metric-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-hover);
+  }
+  .transaction-row:hover,
+  .upcoming-list > button:hover,
+  .detective-list > button:hover,
+  .command-results > button:hover {
+    background: var(--surface-alt);
+  }
+  .transaction-row:hover .category-icon,
+  .upcoming-list > button:hover .category-icon {
+    transform: scale(1.06) rotate(-3deg);
+  }
+  .mini-goals > button:hover .goal-emoji {
+    transform: translateY(-3px) rotate(-5deg);
+  }
+  .lab-teaser:hover .lab-teaser-icon {
+    transform: rotate(12deg) scale(1.05);
+  }
+  .studio-trigger:hover {
+    border-color: var(--green);
+  }
+  .text-button:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .breathing-card > button:hover {
+    background: #ffffff24;
+  }
+  .heatmap > div:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  :root[data-style='brutalist'] .button:not(:disabled):hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--border-strong);
+  }
+  :root[data-style='neon'] .metric-card:hover {
+    box-shadow: var(--shadow-hover);
+    border-color: var(--green);
+  }
+}
+:root[data-style='brutalist'] .button:not(:disabled):active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .button:active,
+  .theme-choice:hover,
+  .nav-link:hover,
+  .heatmap > div:hover {
+    transform: none !important;
+  }
+}
