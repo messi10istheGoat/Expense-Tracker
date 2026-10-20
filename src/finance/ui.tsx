@@ -67,7 +67,7 @@ export function Empty({ title, text, action }: { title: string; text: string; ac
 }
 export function CategoryIcon({ id, size = 18 }: { id: CategoryId; size?: number }) {
   const c = CATEGORIES[id];
-  const { isDark } = useTheme();
+  const { isDark, style } = useTheme();
   const contrastColors: Partial<Record<CategoryId, string>> = {
     utilities: '#8c6900',
     groceries: '#237744',
@@ -78,10 +78,28 @@ export function CategoryIcon({ id, size = 18 }: { id: CategoryId; size?: number 
     refunds: '#916219',
     investments: '#7450c4',
   };
-  const color = isDark ? `color-mix(in srgb, ${c.color} 65%, white)` : (contrastColors[id] ?? c.color);
+  const color =
+    style === 'minimal'
+      ? 'var(--text)'
+      : style === 'neon'
+        ? 'var(--green)'
+        : isDark
+          ? `color-mix(in srgb, ${c.color} 65%, white)`
+          : (contrastColors[id] ?? c.color);
   const Icon = c.icon;
   return (
-    <span className="category-icon" style={{ background: `${c.color}16`, color }}>
+    <span
+      className="category-icon"
+      style={{
+        background:
+          style === 'minimal'
+            ? 'var(--surface-alt)'
+            : style === 'neon'
+              ? 'var(--green-light)'
+              : `${c.color}16`,
+        color,
+      }}
+    >
       <Icon size={size} />
     </span>
   );

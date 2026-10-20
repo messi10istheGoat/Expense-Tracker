@@ -6,6 +6,7 @@ A responsive, local-first expense tracker for desktop and mobile. Built with Rea
 
 - **Overview:** monthly income, expenses, net cash flow, savings rate, cumulative cash-flow chart, category breakdown, upcoming bills, and savings-goal progress.
 - **Transactions:** add, edit, delete, search, filter by month/type/category/account/status, sort, paginate, bulk-clear, bulk-delete, and export the filtered results as CSV.
+- **Analytics:** a dedicated section after Transactions with date/account/category/status filters, equal-length comparisons, daily/weekly/monthly charts, category and merchant drill-down, weekday averages, account activity, prorated budget checks, editable source records, and report/transaction CSV exports.
 - **Quick capture:** enter `Coffee 6.50 yesterday #dining`, review the suggested fields, and save. This is a deterministic parser, not a remote AI service.
 - **Manual accounts:** checking, savings, credit, and cash; editable opening balances; internal transfers and credit-card-payment records that do not inflate income or expenses.
 - **Budgets:** editable recurring monthly category limits, actual spending, remaining allowance, and over-budget warnings.
@@ -25,14 +26,14 @@ Open **Style Studio** in the header (the palette icon on small screens), or visi
 
 | Style     | Personality                                                   | Modes        |
 | --------- | ------------------------------------------------------------- | ------------ |
-| Minimal   | White/neutral surfaces, electric blue, crisp typography       | Light + dark |
+| Minimal   | Pure black, white, and grayscale; crisp typography            | Light + dark |
 | Botanical | The original warm cream and forest-green Spendwise            | Light + dark |
 | Brutalist | Bold outlines, square corners, offset shadows, yellow accents | Light + dark |
-| Neon      | Violet/mint accents, layered surfaces, luminous dark details  | Light + dark |
+| Neon      | Carbon black, electric lime, and sculpted neutral cards       | Light + dark |
 
 Choose **Use device** to follow your system appearance, or pick a fixed mode. The header sun/moon button switches modes without changing your style. **Larger** increases body text, labels, and chart text. Preferences survive reloads and synchronize across tabs on the same origin; they never modify financial records or JSON backups. Returning users with the old light/dark preference retain Botanical. New installs start with Minimal and follow the device.
 
-The refreshed layouts use clearer headings, higher-contrast secondary text, consistent form sizing, and responsive cards/tables across all nine pages. Hover, press, progress, modal, and financial-value feedback respect reduced-motion preferences. See [appearance design notes](docs/APPEARANCE.md) for the reference links and implementation details.
+The refreshed layouts use clearer headings, higher-contrast secondary text, consistent form sizing, and responsive cards/tables across all ten pages. Hover, press, progress, modal, and financial-value feedback respect reduced-motion preferences. See [appearance design notes](docs/APPEARANCE.md) for the reference links and implementation details.
 
 ## Start developing
 
@@ -102,9 +103,10 @@ Never commit `node_modules/`, `dist/`, or generated test artifacts.
 
 ## Code map
 
+- `src/finance/Analytics.tsx`, `analytics.ts`: interactive reports, validated date ranges, comparison/bucket math, and report exports. See [analytics semantics](docs/ANALYTICS.md).
 - `src/finance/model.ts`: data model, backup validation/migration, financial/date helpers, CSV and quick-entry logic.
 - `src/finance/store.tsx`: local persistence, storage failure reporting, currency display, notifications, cross-tab updates.
-- `src/finance/`: the nine application sections and shared dialogs.
+- `src/finance/`: the ten application sections and shared dialogs.
 - `src/finance/appearance.ts`, `ThemeStudio.tsx`, `src/hooks/useTheme.tsx`: appearance preferences, migration, chooser, and provider.
 - `src/finance/styles/`: semantic palettes, base typography, layout, components, page styles, appearance treatments, and reduced-motion-aware interactions (imported by `spendwise.css`).
 - `src/lib/data.ts`: deterministic demo-data generator.

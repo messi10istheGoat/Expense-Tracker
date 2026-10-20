@@ -75,12 +75,13 @@ test('larger reading size works with reduced motion and keyboard theme selection
     await page.locator('.studio-intro p').evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
   ).toBeGreaterThanOrEqual(15);
 });
-test('each style fits all nine pages at this device size', async ({ page }) => {
+test('each style fits all ten pages at this device size', async ({ page }) => {
   test.setTimeout(90_000);
   await page.goto('/');
   const routes = [
     'overview',
     'transactions',
+    'analytics',
     'accounts',
     'budgets',
     'goals',

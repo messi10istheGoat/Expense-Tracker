@@ -4,10 +4,10 @@
 
 Style Studio is available from the workspace header and in Settings. The same component powers both surfaces, with independent native radio group names so an open modal cannot interfere with the Settings gallery. Style, color-mode preference, and reading size are independent controls; changes apply immediately, without a save step.
 
-- **Minimal:** clean white/neutral cards, blue highlights, compact visual rhythm, a dark blue balance card in light mode.
+- **Minimal:** pure black, white, and grayscale. Monochrome chart palettes, icons, progress bars, and status surfaces; a black balance card in light mode.
 - **Botanical:** preserves the original cream/forest-green identity and softer editorial moments.
 - **Brutalist:** stronger outlines, square geometry, hard offset shadows, emphatic typography, yellow highlights.
-- **Neon:** violet and mint, layered violet-tinted surfaces, subtle luminous details at night, pale lavender by day.
+- **Neon:** carbon black, electric lime, and soft neutral surfaces, inspired by the user-supplied Lumin banking reference. Black financial cards, lime accents, and restrained orbit details work in both modes.
 
 All four have a deliberately tuned light and dark palette, rather than an inverted screenshot. The gallery previews follow the current resolved mode. Device mode reacts to operating-system changes; an explicit choice overrides it. The header sun/moon button selects the opposite explicit mode while preserving the style.
 
@@ -27,15 +27,18 @@ Micro-interactions include selected-state checks, hover elevation, deliberate Br
 2. `styles/base.css`: bundled Inter, reset, typography, focus, screen-reader helpers.
 3. `styles/layout.css`: workspace shell, navigation, header, responsive behavior.
 4. `styles/components.css`: panels, buttons, forms, dialogs, toasts.
-5. `styles/pages.css`: all nine financial sections and their responsive arrangements.
+5. `styles/pages.css`: all ten financial sections and their responsive arrangements.
 6. `styles/appearance.css`: gallery/miniature previews and style-specific material treatments.
-7. `styles/motion.css`: state feedback, hover/press behavior, reduced-motion overrides.
+7. `styles/analytics.css`: the dedicated report workspace, responsive controls, chart data tables, and analytical cards.
+8. `styles/motion.css`: state feedback, hover/press behavior, reduced-motion overrides.
 
 `appearance.ts` defines validated IDs, defaults, storage keys, and legacy migration. `useTheme.tsx` owns resolved mode, system preference changes, read-only cross-tab storage synchronization, DOM attributes, and browser theme color. Only local preference actions persist changes; incoming storage events are not echoed back, avoiding cross-tab write races. `index.html` applies matching preferences before React's first paint.
 
 Preferences use `spendwise-style`, `spendwise-theme`, and `spendwise-text-size`. They are separate from `spendwise-workspace-v1`; switching appearance does not migrate, rewrite, or reset financial data. Old explicit light/dark preferences without a style ID retain Botanical. Fresh installs choose Minimal/system/standard. Unavailable storage is tolerated, but preferences then cannot survive a reload.
 
 To add a style, extend `STYLES`, provide light/dark token blocks for both the root and preview selectors, add the material treatment if needed, and extend the browser coverage. Keep semantic foreground/background pairs together, especially hero cards and status badges. Do not use accent colors as a substitute for positive/negative financial meaning.
+
+The later user-supplied Lumin image informed the revised Neon palette and analytical card composition. No card numbers, fake banking integrations, or unimplemented investment/cashback features were copied into the app.
 
 ## References supplied for this refresh
 
@@ -51,7 +54,7 @@ The references informed modular hierarchy, data-card composition, typography, re
 
 - Unit tests cover preference defaults, validated IDs, invalid/unavailable storage, legacy migration, and device-mode resolution, alongside existing financial model tests.
 - Playwright tests exercise all eight style/mode pairs on desktop and mobile: selection, persistence, unchanged financial storage, theme-aware charts, and axe WCAG A/AA checks on Overview, Settings, and Insights.
-- Additional tests cover native-radio keyboard selection, simultaneous Settings/modal controls, larger text, reduced motion, device changes, legacy users, all nine routes per palette, and two-way cross-tab updates.
+- Additional tests cover native-radio keyboard selection, simultaneous Settings/modal controls, larger text, reduced motion, device changes, legacy users, all ten routes per palette, and two-way cross-tab updates.
 - Existing transaction, budget, account, transfer, goal, bill, backup, CSV, keyboard, and storage-error regressions remain in place.
 - The production subpath/offline check verifies service-worker control, local edits, appearance persistence, reload, and absence of third-party requests.
 

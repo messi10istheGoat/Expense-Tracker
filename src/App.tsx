@@ -36,6 +36,7 @@ import { Overview } from './finance/Overview';
 import { TransactionForm, Transactions } from './finance/Transactions';
 import { Accounts, Bills, Budgets, Goals } from './finance/Planning';
 import { Insights } from './finance/Insights';
+import { Analytics } from './finance/Analytics';
 import { Lab } from './finance/Lab';
 import { Settings } from './finance/Settings';
 import { ThemeStudio } from './finance/ThemeStudio';
@@ -56,6 +57,13 @@ const pages = [
     icon: ArrowDownUp,
     group: '',
     sub: 'Every money moment, all in one place.',
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: ChartNoAxesCombined,
+    group: '',
+    sub: 'The full picture. Every detail. Entirely yours.',
   },
   {
     id: 'accounts',
@@ -457,6 +465,7 @@ function WorkspaceApp() {
           </div>
           {page === 'overview' && <Overview month={month} navigate={navigate} onEdit={onEdit} />}
           {page === 'transactions' && <Transactions onEdit={onEdit} onAdd={() => setTransaction({})} />}
+          {page === 'analytics' && <Analytics onEdit={onEdit} onAdd={() => setTransaction({})} />}
           {page === 'accounts' && <Accounts />}
           {page === 'budgets' && <Budgets month={month} />}
           {page === 'goals' && <Goals />}
@@ -502,17 +511,19 @@ function WorkspaceApp() {
         </main>
       </div>
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
-        {[pages[0], pages[1], pages[3], pages[7]].map((p) => (
-          <button
-            className={page === p.id ? 'active' : ''}
-            key={p.id}
-            onClick={() => navigate(p.id)}
-            aria-current={page === p.id ? 'page' : undefined}
-          >
-            <p.icon size={20} />
-            <span>{p.id === 'lab' ? 'Decision lab' : p.label}</span>
-          </button>
-        ))}
+        {['overview', 'transactions', 'analytics', 'lab']
+          .map((id) => pages.find((p) => p.id === id)!)
+          .map((p) => (
+            <button
+              className={page === p.id ? 'active' : ''}
+              key={p.id}
+              onClick={() => navigate(p.id)}
+              aria-current={page === p.id ? 'page' : undefined}
+            >
+              <p.icon size={20} />
+              <span>{p.id === 'lab' ? 'Decision lab' : p.label}</span>
+            </button>
+          ))}
         <button onClick={() => setMobileOpen(true)} aria-label="More pages">
           <Menu size={20} />
           <span>More</span>

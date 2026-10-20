@@ -13,6 +13,7 @@ test('all pages fit the viewport and load without runtime errors', async ({ page
   for (const name of [
     'overview',
     'transactions',
+    'analytics',
     'accounts',
     'budgets',
     'goals',
