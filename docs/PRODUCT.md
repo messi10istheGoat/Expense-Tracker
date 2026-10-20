@@ -35,7 +35,7 @@ There is no remote AI call or invented confidence score. The user can inspect th
 
 ## Design decisions
 
-- Four selectable design languages: Minimal, the preserved cream/green Botanical original, Brutalist, and Neon; each supports light/dark/device mode. Locally hosted Inter, stronger hierarchy, larger reading size, and semantic chart palettes prioritize readability. See [Appearance](APPEARANCE.md) for design references and architecture.
+- Five selectable design languages: Minimal, the preserved cream/green Botanical original, Brutalist, Neon, and Glassmorphism; each supports light/dark/device mode. Locally hosted Inter, stronger hierarchy, larger reading size, and semantic chart palettes prioritize readability. See [Appearance](APPEARANCE.md) for design references and architecture.
 - An overview built around readable financial summaries and actions rather than decorative chart overload.
 - A fixed desktop sidebar, compact mobile bottom navigation, and an all-pages sheet.
 - Native dialogs for keyboard focus containment and escape behavior; shared scroll-lock accounting for nested confirmations.

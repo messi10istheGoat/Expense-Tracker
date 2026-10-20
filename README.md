@@ -16,7 +16,7 @@ A responsive, local-first expense tracker for desktop and mobile. Built with Rea
 - **Decision Lab:** preview a purchase’s effect on planned spending room, see its take-home work-hour cost, compare an alternative savings allocation, and simulate smaller discretionary spending.
 - **Pause pocket:** keep possible purchases in a persistent wishlist with a 24-hour reflection window. Nothing prevents you from deciding sooner; this is a nudge, not a lock.
 - **Data ownership:** validated JSON backup/restore, CSV export, cross-tab workspace updates, and explicit empty/demo workspace choices.
-- **Personalization:** name, planned take-home income, hourly rate, five currency display options, four persistent visual styles, light/dark/device color modes, and a larger reading size.
+- **Personalization:** name, planned take-home income, hourly rate, five currency display options, five persistent visual styles, light/dark/device color modes, and a larger reading size.
 - **Responsive navigation:** desktop sidebar, mobile bottom navigation, global search (`Ctrl/⌘ K`), new transaction shortcut (`N`), native focus-trapped dialogs, and reduced-motion support.
 - **Installable app:** web manifest and app icons; the production service worker caches the single-file app shell so it can reopen offline after a successful online visit.
 
@@ -24,16 +24,19 @@ A responsive, local-first expense tracker for desktop and mobile. Built with Rea
 
 Open **Style Studio** in the header (the palette icon on small screens), or visit **Settings → Style Studio**. Changes preview immediately across the whole app.
 
-| Style     | Personality                                                   | Modes        |
-| --------- | ------------------------------------------------------------- | ------------ |
-| Minimal   | Pure black, white, and grayscale; crisp typography            | Light + dark |
-| Botanical | The original warm cream and forest-green Spendwise            | Light + dark |
-| Brutalist | Bold outlines, square corners, offset shadows, yellow accents | Light + dark |
-| Neon      | Carbon black, electric lime, and sculpted neutral cards       | Light + dark |
+| Style         | Personality                                                   | Modes        |
+| ------------- | ------------------------------------------------------------- | ------------ |
+| Minimal       | Pure black, white, and grayscale; crisp typography            | Light + dark |
+| Botanical     | The original warm cream and forest-green Spendwise            | Light + dark |
+| Brutalist     | Bold outlines, square corners, offset shadows, yellow accents | Light + dark |
+| Neon          | Carbon black, electric lime, and sculpted neutral cards       | Light + dark |
+| Glassmorphism | Frosted panels, a misty landscape, and soft pastel highlights | Light + dark |
 
 Choose **Use device** to follow your system appearance, or pick a fixed mode. The header sun/moon button switches modes without changing your style. **Larger** increases body text, labels, and chart text. Preferences survive reloads and synchronize across tabs on the same origin; they never modify financial records or JSON backups. Returning users with the old light/dark preference retain Botanical. New installs start with Minimal and follow the device.
 
 The refreshed layouts use clearer headings, higher-contrast secondary text, consistent form sizing, and responsive cards/tables across all ten pages. Hover, press, progress, modal, and financial-value feedback respect reduced-motion preferences. See [appearance design notes](docs/APPEARANCE.md) for the reference links and implementation details.
+
+**Glassmorphism** adds translucent, blurred panels over a locally bundled mountain scene. It supports reduced-transparency preferences with solid surfaces, and its background remains available offline—no external image service is required.
 
 ## Start developing
 

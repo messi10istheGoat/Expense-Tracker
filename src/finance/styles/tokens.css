@@ -347,3 +347,99 @@
   --text-caption: 14px;
   --text-label: 16px;
 }
+
+/* Frosted palettes keep opaque control/tooltip surfaces separate from translucent panels. */
+:root[data-style='glass'],
+[data-preview='glass'] {
+  --bg: #dbe5ef;
+  --surface: #f5f8fe;
+  --surface-alt: #e4ebf6;
+  --text: #192a43;
+  --subtle: #344964;
+  --muted: #344964;
+  --border: #92a5c16b;
+  --border-strong: #768bab;
+  --green: #3a527e;
+  --green-dark: #293d62;
+  --green-light: #dbe5f8;
+  --button-bg: #354d7d;
+  --button-text: #fff;
+  --good: #2e6546;
+  --good-bg: #e1efdf;
+  --warm: #805312;
+  --warm-bg: #fbecd2;
+  --danger: #aa3a46;
+  --danger-bg: #fbe9ec;
+  --hero-bg: #20324f;
+  --hero-text: #f5f8ff;
+  --hero-muted: #cedbee;
+  --hero-art: #ffe18a;
+  --hero-art-alt: #c7a8f4;
+  --chart-income: #397355;
+  --chart-expense: #8761ac;
+  --chart-category-2: #b59a48;
+  --chart-category-3: #ac89d4;
+  --chart-category-4: #5b96ad;
+  --chart-category-5: #c4875e;
+  --heatmap-1: #dde4ec;
+  --heatmap-2: #b8c5d8;
+  --heatmap-3: #869cc4;
+  --heatmap-4: #495f94;
+  --radius-card: 22px;
+  --radius-control: 12px;
+  --glass-panel: #f8fbffcc;
+  --glass-chrome: #e6eefbcc;
+  --glass-dialog: #f4f8fff2;
+  --glass-edge: #ffffffbb;
+  --glass-wash: #e0eafacb;
+  --glass-sheen: #fff9;
+  --shadow: 0 12px 36px #14244016, inset 0 1px 0 #ffffffa6;
+  --shadow-hover: 0 18px 44px #14244026, inset 0 1px 0 #ffffffbb;
+}
+:root.dark[data-style='glass'],
+[data-preview='glass'][data-preview-mode='dark'] {
+  --bg: #101b2e;
+  --surface: #1b2b43;
+  --surface-alt: #2b3d57;
+  --text: #f4f7ff;
+  --subtle: #d6e1f1;
+  --muted: #b8c9e0;
+  --border: #b9d0f333;
+  --border-strong: #869fbe;
+  --green: #c4d7ff;
+  --green-dark: #e1eaff;
+  --green-light: #324b70;
+  --button-bg: #c4d7ff;
+  --button-text: #14243e;
+  --good: #c2e8a8;
+  --good-bg: #294232;
+  --warm: #f4d18f;
+  --warm-bg: #473c2a;
+  --danger: #ffb3bf;
+  --danger-bg: #4c2d3b;
+  --hero-bg: #152a46e8;
+  --hero-text: #f5f8ff;
+  --hero-muted: #d0dff3;
+  --hero-art: #ffe18a;
+  --hero-art-alt: #c7a8f4;
+  --chart-income: #c1e899;
+  --chart-expense: #d2b6ff;
+  --chart-category-2: #ffe18a;
+  --chart-category-3: #c9a7f3;
+  --chart-category-4: #91d9ef;
+  --chart-category-5: #ffbf99;
+  --heatmap-1: #35495d;
+  --heatmap-2: #65749b;
+  --heatmap-3: #a19ed1;
+  --heatmap-4: #d9c0ff;
+  --radius-card: 22px;
+  --radius-control: 12px;
+  --glass-panel: #132038cc;
+  --glass-chrome: #101c30c9;
+  --glass-dialog: #192a43f5;
+  --glass-edge: #e6eeff30;
+  --glass-wash: #0713238c;
+  --glass-sheen: #fff2;
+  --shadow: 0 14px 40px #00000026, inset 0 1px 0 #ffffff1f;
+  --shadow-hover: 0 20px 48px #00000038, inset 0 1px 0 #ffffff2e;
+}

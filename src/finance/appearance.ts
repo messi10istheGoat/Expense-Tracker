@@ -31,6 +31,14 @@ export const STYLES = [
     label: 'A little electric',
     colors: ['#d2ff00', '#11120e', '#eff1e9'],
   },
+  {
+    id: 'glass',
+    name: 'Glassmorphism',
+    tagline: 'A softer point of view.',
+    description: 'Frosted surfaces, a misty mountain backdrop, and a little pastel magic.',
+    label: 'Frosted & atmospheric',
+    colors: ['#ffe17b', '#c9acfa', '#b9e58d', '#8bd4ed'],
+  },
 ] as const;
 export type StyleId = (typeof STYLES)[number]['id'];
 export type ColorMode = 'light' | 'dark';

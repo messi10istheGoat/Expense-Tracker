@@ -1,6 +1,6 @@
 /* The app is built into one HTML file. Cache only this app's public shell,
    never backups, browser data, third-party requests, or other sites. */
-const CACHE = 'spendwise-shell-v3';
+const CACHE = 'spendwise-shell-v4';
 const indexURL = new URL('./index.html', self.location.href).href;
 const shell = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', (event) => {

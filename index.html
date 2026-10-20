@@ -27,7 +27,8 @@
             mode = savedMode;
             style = 'botanical';
           }
-          if (['minimal', 'botanical', 'brutalist', 'neon'].indexOf(savedStyle) !== -1) style = savedStyle;
+          if (['minimal', 'botanical', 'brutalist', 'neon', 'glass'].indexOf(savedStyle) !== -1)
+            style = savedStyle;
           if (localStorage.getItem('spendwise-text-size') === 'large') textSize = 'large';
         } catch (e) {}
         var dark =
