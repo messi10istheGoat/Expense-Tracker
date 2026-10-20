@@ -18,10 +18,10 @@ export function ThemeStudio({ compact = false }: { compact?: boolean }) {
           <h3>
             Make it feel like <em>you.</em>
           </h3>
-          <p>Four personalities. Light or dark. One clear picture of your money.</p>
+          <p>Five personalities. Light or dark. One clear picture of your money.</p>
         </div>
         <span className="studio-count">
-          04 <span>CURATED STYLES</span>
+          {String(STYLES.length).padStart(2, '0')} <span>CURATED STYLES</span>
         </span>
       </div>
       <fieldset className="mode-picker">
@@ -51,7 +51,10 @@ export function ThemeStudio({ compact = false }: { compact?: boolean }) {
         <legend>Choose your design</legend>
         <div className="style-gallery">
           {STYLES.map((item) => (
-            <label key={item.id} className={`theme-choice ${style === item.id ? 'chosen' : ''}`}>
+            <label
+              key={item.id}
+              className={`theme-choice theme-choice-${item.id} ${style === item.id ? 'chosen' : ''}`}
+            >
               <input
                 className="theme-choice-input"
                 type="radio"

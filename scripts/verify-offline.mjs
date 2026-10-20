@@ -96,6 +96,24 @@ try {
     financialRecords,
     'Offline appearance changes must not modify financial records',
   );
+  // The Glassmorphism landscape is embedded in the app shell, not a network dependency.
+  await page.getByRole('button', { name: 'Open Style Studio' }).click();
+  await page
+    .getByRole('dialog', { name: 'Style Studio', exact: true })
+    .getByRole('radio', { name: 'Glassmorphism theme', exact: true })
+    .check();
+  await page
+    .getByRole('dialog', { name: 'Style Studio', exact: true })
+    .getByRole('button', { name: 'Close dialog' })
+    .click();
+  await page.reload();
+  assert.equal(await page.locator('html').getAttribute('data-style'), 'glass');
+  assert(
+    (
+      await page.locator('.spendwise').evaluate((el) => getComputedStyle(el, '::before').backgroundImage)
+    ).includes('data:image/jpeg;base64,'),
+    'The glass landscape must be bundled and available offline',
+  );
   await page.goto(`${root}#analytics`);
   await page.getByRole('heading', { name: 'Analytics', exact: true }).waitFor();
   await page.getByLabel('Search analytics transactions', { exact: true }).fill('Offline groceries');
@@ -114,7 +132,7 @@ try {
   assert.deepEqual(errors, []);
   assert.deepEqual(external, [], 'The production app must not request external fonts or services');
   console.log(
-    'PASS: production subpath, service worker control, offline reload, offline transaction/appearance persistence, offline analytics, and no third-party requests.',
+    'PASS: production subpath, service worker control, offline reload, offline transaction/appearance persistence, offline analytics, bundled glass landscape, and no third-party requests.',
   );
 } finally {
   if (browser) await browser.close();

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { STYLES } from '../src/finance/appearance';
 import { readFile } from 'node:fs/promises';
 import { iso, makeWorkspace, validateWorkspace, type Entry } from '../src/finance/model';
 import { shiftDate } from '../src/finance/analytics';
@@ -149,9 +150,9 @@ test('empty data is honest and never produces invalid numerical output', async (
   await expect(page.getByRole('heading', { name: 'No matching records' })).toBeVisible();
   await expect(page.locator('.analytics-page')).not.toContainText(/NaN|Infinity/);
 });
-test('Analytics passes automated accessibility checks in all eight appearances', async ({ page }) => {
+test('Analytics passes automated accessibility checks in all ten appearances', async ({ page }) => {
   test.setTimeout(90_000);
-  for (const style of ['minimal', 'botanical', 'brutalist', 'neon'])
+  for (const style of STYLES.map((s) => s.id))
     for (const mode of ['light', 'dark']) {
       await page.evaluate(
         ({ style, mode }) => {
@@ -168,12 +169,12 @@ test('Analytics passes automated accessibility checks in all eight appearances',
     }
 });
 
-test('Analytics fits five widths and larger text across all eight appearances', async ({ page }) => {
-  test.setTimeout(120_000);
+test('Analytics fits five widths and larger text across all ten appearances', async ({ page }) => {
+  test.setTimeout(150_000);
   for (const textSize of ['standard', 'large']) {
     for (const width of textSize === 'standard' ? [320, 390, 768, 1024, 1440] : [320, 390]) {
       await page.setViewportSize({ width, height: 1000 });
-      for (const style of ['minimal', 'botanical', 'brutalist', 'neon']) {
+      for (const style of STYLES.map((s) => s.id)) {
         for (const mode of ['light', 'dark']) {
           await page.evaluate(
             ({ style, mode, textSize }) => {

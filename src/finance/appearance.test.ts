@@ -61,8 +61,8 @@ describe('appearance preferences', () => {
   ] as const)('resolves %s with system-dark=%s to %s', (mode, systemDark, expected) => {
     expect(resolveMode(mode, systemDark)).toBe(expected);
   });
-  it('has four distinct stable IDs, including the preserved original', () => {
-    expect(new Set(STYLES.map((s) => s.id)).size).toBe(4);
+  it('has five distinct stable IDs, including the preserved original', () => {
+    expect(new Set(STYLES.map((s) => s.id)).size).toBe(5);
     expect(isStyle('botanical')).toBe(true);
   });
 });

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-const designs = ['Minimal', 'Botanical', 'Brutalist', 'Neon'];
+import { STYLES } from '../src/finance/appearance';
+const designs = STYLES.map((s) => s.name);
 test.use({ reducedMotion: 'reduce' });
 for (const name of designs)
   for (const mode of ['light', 'dark']) {
@@ -18,11 +19,17 @@ for (const name of designs)
       await dialog
         .getByRole('button', { name: mode === 'dark' ? 'After hours' : 'Light & airy', exact: false })
         .click();
-      await expect(page.locator('html')).toHaveAttribute('data-style', name.toLowerCase());
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-style',
+        STYLES.find((s) => s.name === name)!.id,
+      );
       await expect(page.locator('html')).toHaveClass(mode === 'dark' ? /dark/ : /^(?!.*\bdark\b)/);
       await dialog.getByRole('button', { name: 'Close dialog' }).click();
       await page.reload();
-      await expect(page.locator('html')).toHaveAttribute('data-style', name.toLowerCase());
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-style',
+        STYLES.find((s) => s.name === name)!.id,
+      );
       expect(await page.evaluate(() => localStorage.getItem('spendwise-workspace-v1'))).toBe(before);
       await expect(page.locator('.cash-chart .recharts-area-curve').first()).toHaveAttribute(
         'stroke',
@@ -76,7 +83,7 @@ test('larger reading size works with reduced motion and keyboard theme selection
   ).toBeGreaterThanOrEqual(15);
 });
 test('each style fits all ten pages at this device size', async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   await page.goto('/');
   const routes = [
     'overview',
@@ -94,13 +101,16 @@ test('each style fits all ten pages at this device size', async ({ page }) => {
     for (const mode of ['light', 'dark']) {
       await page.evaluate(
         ({ style, mode }) => {
-          localStorage.setItem('spendwise-style', style.toLowerCase());
+          localStorage.setItem('spendwise-style', style);
           localStorage.setItem('spendwise-theme', mode);
         },
-        { style, mode },
+        { style: STYLES.find((s) => s.name === style)!.id, mode },
       );
       await page.reload();
-      await expect(page.locator('html')).toHaveAttribute('data-style', style.toLowerCase());
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-style',
+        STYLES.find((s) => s.name === style)!.id,
+      );
       for (const route of routes) {
         await page.goto(`/#${route}`);
         await expect(page.locator('h1')).toBeVisible();

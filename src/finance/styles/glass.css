@@ -1,0 +1,279 @@
+/* Glassmorphism: a local atmospheric scene behind readable, frosted materials.
+   The landscape is bundled into the single-file build, including offline use. */
+:root[data-style='glass'],
+[data-preview='glass'] {
+  --glass-scene: url('../assets/glass-landscape.jpg');
+}
+:root[data-style='glass'] .spendwise {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+}
+:root[data-style='glass'] .spendwise::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--glass-wash), var(--glass-wash)),
+    var(--glass-scene) center / cover no-repeat;
+}
+:root[data-style='glass']
+  :is(
+    .sw-panel,
+    .metric-card,
+    .workspace-switch,
+    .sidebar-inspiration,
+    .analytics-filters,
+    .analytics-facts,
+    .lab-teaser,
+    .insight-banner,
+    .budget-banner,
+    .lab-intro
+  ) {
+  background: var(--glass-panel);
+  border-color: var(--glass-edge);
+  box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+  backdrop-filter: blur(20px) saturate(125%);
+}
+:root[data-style='glass'] :is(.sidebar, .workspace-header, .mobile-bottom-nav) {
+  background: var(--glass-chrome);
+  border-color: var(--glass-edge);
+  box-shadow: inset 0 1px 0 var(--glass-sheen);
+  -webkit-backdrop-filter: blur(26px) saturate(130%);
+  backdrop-filter: blur(26px) saturate(130%);
+}
+:root[data-style='glass'] :is(.nav-link.active, .mobile-bottom-nav > button.active) {
+  background: var(--green-light);
+  color: var(--green) !important;
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 4px 14px #0714260a;
+}
+:root[data-style='glass'] :is(.brand > span, .profile-avatar, .workspace-avatar) {
+  border: 1px solid var(--glass-edge);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 0 var(--glass-sheen);
+}
+:root[data-style='glass'] .workspace-header .studio-trigger {
+  border-color: var(--glass-edge);
+  box-shadow: inset 0 1px 0 var(--glass-sheen);
+}
+:root[data-style='glass'] .welcome-note {
+  background: var(--glass-panel);
+  border-color: var(--glass-edge);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+/* Warm colored summary tiles echo the reference without recoloring financial meaning. */
+:root[data-style='glass'] :is(.metric-card, .analytics-kpi) {
+  --text: #222a30;
+  --subtle: #35434b;
+  --muted: #35434b;
+  --green: #344451;
+  --good: #285039;
+  --warm: #734812;
+  color: var(--text);
+  border-color: #ffffff80;
+  box-shadow:
+    0 10px 24px #0914261a,
+    inset 0 1px 0 #ffffff99;
+}
+:root[data-style='glass'] :is(.metric-card, .analytics-kpi):nth-child(1) {
+  background: linear-gradient(135deg, #ffe993f2, #ffdb68e8);
+}
+:root[data-style='glass'] :is(.metric-card, .analytics-kpi):nth-child(2) {
+  background: linear-gradient(135deg, #ffd3acf2, #ffaf7fe8);
+}
+:root[data-style='glass'] :is(.metric-card, .analytics-kpi):nth-child(3) {
+  background: linear-gradient(135deg, #e0c6fff2, #c9a9f2e8);
+}
+:root[data-style='glass'] :is(.metric-card, .analytics-kpi):nth-child(4) {
+  background: linear-gradient(135deg, #d9f4aff2, #b6df87e8);
+}
+:root[data-style='glass'] .metric-bottom > svg path {
+  stroke: #455846;
+}
+:root[data-style='glass'] :is(.breathing-card, .analytics-hero) {
+  background: linear-gradient(135deg, #243d5dee, #17293de8);
+  border-color: #d7e7ff33;
+  box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+:root[data-style='glass'] .analytics-retention-ring {
+  background: conic-gradient(var(--chart-income) var(--retained), var(--surface-alt) 0);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+}
+:root[data-style='glass'] .analytics-retention-ring > div {
+  background: var(--surface);
+}
+:root[data-style='glass'] .goal-state {
+  color: var(--green) !important;
+}
+:root[data-style='glass'] .goal-emoji {
+  background: var(--green-light) !important;
+  color: var(--green);
+}
+:root[data-style='glass'] .button {
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 4px 12px #10213d0d;
+}
+:root[data-style='glass'] .sw-modal {
+  background: var(--glass-dialog);
+  border-color: var(--glass-edge);
+  box-shadow:
+    0 30px 100px #07132366,
+    inset 0 1px 0 var(--glass-sheen);
+  -webkit-backdrop-filter: blur(30px) saturate(125%);
+  backdrop-filter: blur(30px) saturate(125%);
+}
+:root[data-style='glass'] .sw-modal::backdrop {
+  background: #07132380;
+}
+/* The fifth option is panoramic rather than an orphaned half-width card. */
+.spendwise .theme-choice-glass,
+.sw-modal .theme-choice-glass {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 18px;
+  align-content: start;
+}
+.theme-choice-glass > .theme-miniature {
+  grid-column: 1;
+  grid-row: 1 / 6;
+  height: 170px;
+}
+.theme-choice-glass > :is(.theme-choice-title, .theme-tagline, p, .theme-meta) {
+  grid-column: 2;
+}
+.theme-choice-glass > .theme-choice-title {
+  margin-top: 4px;
+}
+.theme-choice-glass > p {
+  min-height: 0;
+}
+.compact-studio .theme-choice-glass > .theme-miniature {
+  height: 130px;
+}
+.theme-miniature[data-preview='glass'] {
+  background:
+    linear-gradient(var(--glass-wash), var(--glass-wash)),
+    var(--glass-scene) center / cover;
+  border-color: var(--glass-edge);
+}
+.theme-miniature[data-preview='glass'] :is(.mini-side, .mini-metrics > div, .mini-bottom) {
+  background: var(--glass-panel);
+  border-color: var(--glass-edge);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+.theme-miniature[data-preview='glass'] .mini-metrics > div:first-child {
+  background: #ffe17be8;
+  color: #222a30;
+  --subtle: #35434b;
+  --muted: #35434b;
+}
+.theme-miniature[data-preview='glass'] .mini-metrics > div:last-child {
+  background: #c9acfadb;
+}
+.theme-miniature[data-preview='glass'] .mini-bars > i {
+  background: #4d3c6a;
+}
+/* A solid material fallback preserves hierarchy when blur is unavailable or transparency is reduced. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-style='glass']
+    :is(
+      .sw-panel:not(.analytics-kpi),
+      .workspace-switch,
+      .sidebar-inspiration,
+      .analytics-filters,
+      .analytics-facts,
+      .lab-teaser,
+      .insight-banner,
+      .budget-banner,
+      .lab-intro,
+      .sidebar,
+      .workspace-header,
+      .mobile-bottom-nav,
+      .welcome-note
+    ) {
+    background: var(--surface);
+  }
+  :root[data-style='glass'] .sw-modal {
+    background: var(--surface);
+  }
+}
+@media (max-width: 767px) {
+  :root[data-style='glass'] :is(.sw-panel, .workspace-header, .mobile-bottom-nav, .metric-card) {
+    -webkit-backdrop-filter: blur(14px) saturate(115%);
+    backdrop-filter: blur(14px) saturate(115%);
+  }
+  .theme-choice-glass {
+    column-gap: 12px !important;
+  }
+  .theme-choice-glass > .theme-miniature {
+    height: 150px;
+  }
+  .compact-studio .theme-choice-glass > .theme-miniature {
+    height: 124px;
+  }
+  .theme-choice-glass > .theme-choice-title > strong {
+    font-size: 16px;
+    overflow-wrap: anywhere;
+  }
+  .theme-choice-glass > .theme-meta {
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 359px) {
+  .spendwise .theme-choice-glass,
+  .sw-modal .theme-choice-glass {
+    display: block;
+  }
+  .theme-choice-glass > .theme-miniature,
+  .compact-studio .theme-choice-glass > .theme-miniature {
+    height: 140px;
+  }
+  .theme-choice-glass > .theme-choice-title {
+    margin-top: 14px;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-style='glass'] .spendwise::before {
+    display: none;
+  }
+  :root[data-style='glass'] .spendwise {
+    background: var(--bg);
+  }
+  :root[data-style='glass']
+    :is(
+      .sw-panel:not(.analytics-kpi),
+      .workspace-switch,
+      .sidebar-inspiration,
+      .analytics-filters,
+      .analytics-facts,
+      .lab-teaser,
+      .insight-banner,
+      .budget-banner,
+      .lab-intro,
+      .sidebar,
+      .workspace-header,
+      .mobile-bottom-nav,
+      .welcome-note,
+      .sw-modal
+    ) {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  :root[data-style='glass'] :is(.metric-card, .analytics-kpi, .breathing-card, .analytics-hero) {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
