@@ -96,11 +96,25 @@ try {
     financialRecords,
     'Offline appearance changes must not modify financial records',
   );
+  await page.goto(`${root}#analytics`);
+  await page.getByRole('heading', { name: 'Analytics', exact: true }).waitFor();
+  await page.getByLabel('Search analytics transactions', { exact: true }).fill('Offline groceries');
+  assert.equal(await page.locator('.analytics-transactions tbody tr').count(), 1);
+  assert((await page.locator('.analytics-transactions tbody').textContent()).includes('12.25'));
+  await page.reload();
+  await page.getByRole('heading', { name: 'Analytics', exact: true }).waitFor();
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem('spendwise-workspace-v1')),
+    financialRecords,
+    'Offline analytics must preserve the source records',
+  );
+  await page.goto(root);
+  await page.getByRole('heading', { name: /Good / }).waitFor();
   assert.equal(await page.getByRole('heading', { name: /Good / }).count(), 1);
   assert.deepEqual(errors, []);
   assert.deepEqual(external, [], 'The production app must not request external fonts or services');
   console.log(
-    'PASS: production subpath, service worker control, offline reload, offline transaction/appearance persistence, and no third-party requests.',
+    'PASS: production subpath, service worker control, offline reload, offline transaction/appearance persistence, offline analytics, and no third-party requests.',
   );
 } finally {
   if (browser) await browser.close();

@@ -47,3 +47,7 @@ There is no remote AI call or invented confidence score. The user can inspect th
 This implementation is a self-contained personal-finance workspace. Production bank imports, authentication, encrypted cloud storage, native device testing, receipt OCR, external notifications, tax reporting, and shared household permissions require additional infrastructure and independent security work. They are not represented by fake buttons or fictitious sync status.
 
 Browser-based storage keeps setup simple and avoids transmitting financial records, but is not encrypted and can be cleared by the user or browser. Export/restore and clear privacy language are essential parts of the product, not optional fine print.
+
+## Dedicated Analytics workspace
+
+Analytics now follows Transactions in navigation, distinct from the existing pattern-detection Insights page. It provides interactive reports from logged workspace records, with transparent period-comparison and budget-proration semantics, drill-down editing, and exports. See [Analytics](ANALYTICS.md). The supplied banking reference informs the carbon/lime Neon look; Minimal is now explicitly black-and-white. Botanical and Brutalist remain available in both modes.

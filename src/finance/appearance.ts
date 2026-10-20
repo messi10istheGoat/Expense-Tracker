@@ -3,9 +3,9 @@ export const STYLES = [
     id: 'minimal',
     name: 'Minimal',
     tagline: 'Less noise. More clarity.',
-    description: 'Paper-white surfaces, precise spacing, and an electric blue accent.',
+    description: 'Pure black and white. Quiet surfaces, confident typography, nothing extra.',
     label: 'Clean & focused',
-    colors: ['#3155e7', '#14a387', '#e7eaf4'],
+    colors: ['#171717', '#888888', '#eeeeee'],
   },
   {
     id: 'botanical',
@@ -27,9 +27,9 @@ export const STYLES = [
     id: 'neon',
     name: 'Neon',
     tagline: 'A brighter perspective.',
-    description: 'Violet energy, luminous details, and layered surfaces. Built for both day and night.',
+    description: 'Carbon black, electric lime, and sculpted cards. A fresh perspective on your money.',
     label: 'A little electric',
-    colors: ['#9b6dff', '#26d7c3', '#17162b'],
+    colors: ['#d2ff00', '#11120e', '#eff1e9'],
   },
 ] as const;
 export type StyleId = (typeof STYLES)[number]['id'];
