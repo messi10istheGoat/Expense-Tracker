@@ -11,7 +11,6 @@ import {
   CircleHelp,
   Command,
   FlaskConical,
-  Flower2,
   HardDrive,
   LayoutDashboard,
   Leaf,
@@ -29,8 +28,10 @@ import {
   Target,
   Wallet,
 } from 'lucide-react';
+import { AccountProvider, useAccount } from './cloud/CloudProvider';
+import { AccountControls, CloudStatus } from './cloud/AccountControls';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
-import { FinanceProvider, useFinance } from './finance/store';
+import { useFinance } from './finance/store';
 import { monthKey, type Entry } from './finance/model';
 import { Overview } from './finance/Overview';
 import { TransactionForm, Transactions } from './finance/Transactions';
@@ -48,56 +49,56 @@ const pages = [
     id: 'overview',
     label: 'Overview',
     icon: LayoutDashboard,
-    group: 'YOUR WORKSPACE',
-    sub: 'A little clarity for your everyday.',
+    group: 'WORKSPACE',
+    sub: 'Balances, cash flow, and upcoming payments.',
   },
   {
     id: 'transactions',
     label: 'Transactions',
     icon: ArrowDownUp,
     group: '',
-    sub: 'Every money moment, all in one place.',
+    sub: 'Review and manage your income and expenses.',
   },
   {
     id: 'analytics',
     label: 'Analytics',
     icon: ChartNoAxesCombined,
     group: '',
-    sub: 'The full picture. Every detail. Entirely yours.',
+    sub: 'Explore spending patterns and compare periods.',
   },
   {
     id: 'accounts',
     label: 'Accounts',
     icon: Wallet,
     group: '',
-    sub: 'The bigger picture, without the guesswork.',
+    sub: 'Manage your accounts, balances, and transfers.',
   },
   {
     id: 'budgets',
     label: 'Budgets',
     icon: ChartNoAxesCombined,
-    group: 'MAKE ROOM FOR MORE',
-    sub: 'A thoughtful plan for the way you live.',
+    group: 'PLANNING',
+    sub: 'Set monthly spending limits by category.',
   },
   {
     id: 'goals',
     label: 'Savings goals',
     icon: Target,
     group: '',
-    sub: 'For the things you can’t wait to make happen.',
+    sub: 'Set targets and track your contributions.',
   },
   {
     id: 'bills',
     label: 'Bills & subscriptions',
     icon: Repeat2,
     group: '',
-    sub: 'A little foresight goes a long way.',
+    sub: 'Keep track of recurring payments and due dates.',
   },
   {
     id: 'insights',
     label: 'Insights',
     icon: ChartNoAxesCombined,
-    group: 'A FRESH PERSPECTIVE',
+    group: 'TOOLS',
     sub: 'The patterns behind your everyday spending.',
   },
   {
@@ -142,7 +143,7 @@ function SearchDialog({
     onClose();
   };
   return (
-    <Modal title="Find a little clarity" sub="Search transactions or jump to a page." onClose={onClose}>
+    <Modal title="Search workspace" sub="Search transactions or jump to a page." onClose={onClose}>
       <div className="search-field palette-search">
         <Search size={19} />
         <input
@@ -162,7 +163,7 @@ function SearchDialog({
             <ArrowUpRight size={14} />
           </button>
         ))}
-        {transactions.length > 0 && <span className="eyebrow">MONEY MOMENTS</span>}
+        {transactions.length > 0 && <span className="eyebrow">TRANSACTIONS</span>}
         {transactions.map((t) => (
           <button
             key={t.id}
@@ -188,7 +189,7 @@ function SearchDialog({
           <kbd>esc</kbd> to close
         </span>
         <span>
-          Your data never leaves this device
+          Search your workspace records
           <ShieldCheck size={12} />
         </span>
       </div>
@@ -197,6 +198,7 @@ function SearchDialog({
 }
 function WorkspaceApp() {
   const { w, storageError, notify } = useFinance();
+  const account = useAccount();
   const { isDark, toggle, style } = useTheme();
   const [page, setPage] = useState(getPage);
   const [month, setMonth] = useState(monthKey());
@@ -274,12 +276,7 @@ function WorkspaceApp() {
   ]
     .sort()
     .reverse();
-  const title =
-    page === 'overview'
-      ? `Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, ${w.profile.name}`
-      : page === 'settings'
-        ? 'Your little corner'
-        : currentPage?.label;
+  const title = page === 'settings' ? 'Settings' : currentPage?.label;
   return (
     <div className="spendwise">
       <a
@@ -297,15 +294,13 @@ function WorkspaceApp() {
           <span>
             <Sprout size={25} strokeWidth={1.8} />
           </span>
-          <strong>
-            spendwise<span>®</span>
-          </strong>
+          <strong>spendwise</strong>
         </button>
         <div className="workspace-switch">
           <span className="workspace-avatar">{w.profile.name.slice(0, 1).toUpperCase()}</span>
           <div>
             <strong>My workspace</strong>
-            <small>{w.demo ? 'Demo workspace' : 'On this device'}</small>
+            <small>{account.session ? 'Personal account' : 'Demo workspace'}</small>
           </div>
           <Leaf size={14} />
         </div>
@@ -327,15 +322,6 @@ function WorkspaceApp() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="sidebar-inspiration">
-            <Flower2 size={27} strokeWidth={1.5} />
-            <strong>Good things take a little growing.</strong>
-            <p>Give your next chapter a head start.</p>
-            <button onClick={() => navigate('goals')}>
-              Plant a savings goal
-              <ArrowUpRight size={14} />
-            </button>
-          </div>
           <button
             className={`nav-link ${page === 'settings' ? 'active' : ''}`}
             onClick={() => navigate('settings')}
@@ -346,14 +332,10 @@ function WorkspaceApp() {
           </button>
           <button className="nav-link" onClick={() => setHelp(true)}>
             <CircleHelp size={18} />
-            <span>A little help</span>
+            <span>Help & shortcuts</span>
             <ArrowUpRight size={14} />
           </button>
-          <div className="local-status">
-            <span className={storageError ? 'error-dot' : 'status-dot'} />
-            {storageError ? 'Storage needs attention' : 'Saved on this device'}
-            <HardDrive size={12} />
-          </div>
+          <CloudStatus />
         </div>
       </aside>
       <div className="workspace-body">
@@ -383,7 +365,7 @@ function WorkspaceApp() {
             </button>
             <button className="header-search" aria-label="Search workspace" onClick={() => setSearch(true)}>
               <Search size={16} />
-              <span>Find anything…</span>
+              <span>Search…</span>
               <kbd>
                 <Command size={10} /> K
               </kbd>
@@ -396,20 +378,39 @@ function WorkspaceApp() {
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <span className="header-divider" />
-            <button
-              className="profile-avatar"
-              onClick={() => navigate('settings')}
-              aria-label="Open profile settings"
-            >
-              {w.profile.name.slice(0, 1).toUpperCase()}
-            </button>
+            <AccountControls />
           </div>
         </header>
         <main id="workspace-content" ref={mainRef} tabIndex={-1} className="workspace-main">
           {!online && (
             <div className="offline-banner" role="status">
               <HardDrive size={15} />
-              <span>You’re offline. Your records still work here and save on this device.</span>
+              <span>You’re offline. Your changes stay on this device until you reconnect.</span>
+            </div>
+          )}
+          {account.sync && ['conflict', 'error', 'offline'].includes(account.sync.status) && (
+            <div className="storage-banner sync-banner" role="status">
+              <span>
+                {account.sync.status === 'conflict'
+                  ? 'Another device saved different records. Review both versions before continuing.'
+                  : account.sync.error ||
+                    'Changes have not reached the cloud. Keep this app open or export a backup.'}
+              </span>
+              <button onClick={() => window.dispatchEvent(new Event('spendwise:open-account'))}>
+                Review sync
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
+          {!account.session && (
+            <div className="demo-context">
+              <span>
+                <strong>{w.demo ? 'Demo workspace' : 'Local workspace'}</strong> ·{' '}
+                {w.demo ? 'Sample records. ' : ''}Saved only in this browser.
+              </span>
+              <button onClick={account.openLogin}>
+                Use your own account <ArrowRight size={13} />
+              </button>
             </div>
           )}
           {storageError && (
@@ -429,11 +430,12 @@ function WorkspaceApp() {
                   {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </span>
               )}
-              <h1>
-                {title}
-                {page === 'overview' && <span className="greeting-leaf">✳</span>}
-              </h1>
-              <p>{page === 'settings' ? 'Make Spendwise feel a little more like you.' : currentPage?.sub}</p>
+              <h1>{title}</h1>
+              <p>
+                {page === 'settings'
+                  ? 'Manage your profile, categories, appearance, and data.'
+                  : currentPage?.sub}
+              </p>
             </div>
             <div className="heading-actions">
               {['overview', 'budgets', 'insights'].includes(page) && (
@@ -476,7 +478,7 @@ function WorkspaceApp() {
           <footer className="workspace-footer">
             <span>
               <Sprout size={15} />
-              Made for a life well spent.
+              Personal finance workspace
             </span>
             <div>
               {installPrompt && (
@@ -503,7 +505,7 @@ function WorkspaceApp() {
               )}
               <span>
                 <ShieldCheck size={12} />
-                Local-first. Always yours.
+                {account.session ? 'Cloud account' : 'Demo · browser storage'}
               </span>
               <span>Spendwise © {new Date().getFullYear()}</span>
             </div>
@@ -511,7 +513,7 @@ function WorkspaceApp() {
         </main>
       </div>
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
-        {['overview', 'transactions', 'analytics', 'lab']
+        {['overview', 'transactions', 'analytics', 'accounts']
           .map((id) => pages.find((p) => p.id === id)!)
           .map((p) => (
             <button
@@ -532,7 +534,7 @@ function WorkspaceApp() {
       {mobileOpen && (
         <Modal
           title="Your workspace"
-          sub="A little room for every part of your plan."
+          sub="Choose a section of your workspace."
           onClose={() => setMobileOpen(false)}
         >
           <nav className="mobile-page-list" aria-label="All pages">
@@ -550,7 +552,7 @@ function WorkspaceApp() {
               }}
             >
               <CircleHelp size={19} />
-              <span>A little help</span>
+              <span>Help & shortcuts</span>
               <ArrowUpRight size={16} />
             </button>
           </nav>
@@ -576,8 +578,8 @@ function WorkspaceApp() {
       )}
       {help && (
         <Modal
-          title="A little help goes a long way"
-          sub="Welcome to a more intentional relationship with money."
+          title="Help & shortcuts"
+          sub="Capture, planning, backups, and account sync."
           onClose={() => setHelp(false)}
           wide
         >
@@ -586,13 +588,14 @@ function WorkspaceApp() {
               <span>01</span>
               <h3>Make it your own</h3>
               <p>
-                Explore the demo, then start an empty workspace in Settings. Set your income plan and account
-                opening balances.
+                {account.session
+                  ? 'Set your planned income, preferred display currency, and account opening balances in Settings and Accounts.'
+                  : 'Explore the demo, then sign in to create an empty cloud account. The demo remains separate.'}
               </p>
             </div>
             <div>
               <span>02</span>
-              <h3>Capture the little things</h3>
+              <h3>Record transactions</h3>
               <p>
                 Add income and expenses. Try Quick capture: “Coffee 6.50 yesterday”. Review the suggested
                 details before saving.
@@ -624,7 +627,7 @@ function WorkspaceApp() {
             </div>
             <div>
               <span>⌘</span>
-              <h3>Little shortcuts</h3>
+              <h3>Keyboard shortcuts</h3>
               <p>
                 <kbd>Ctrl / ⌘ K</kbd> Search your workspace
                 <br />
@@ -637,8 +640,10 @@ function WorkspaceApp() {
           <div className="info-note">
             <ShieldCheck size={19} />
             <p>
-              No banks are connected. There is no cloud sync, sign-in, or automatic bill payment. Records live
-              in this browser; clearing storage removes them. Keep backups and use a trusted device.
+              {account.session
+                ? 'Your records sync to your account. Check sync status before closing, export regular backups, and sign out on shared devices. Cached records on this device are not application-encrypted.'
+                : 'Demo records are stored in this browser. Customer accounts use cloud sync when configured. Clearing storage removes local records, so export a backup first.'}{' '}
+              No bank connections or automatic payments are included.
             </p>
           </div>
           <div className="form-actions">
@@ -655,9 +660,9 @@ function WorkspaceApp() {
 export default function App() {
   return (
     <ThemeProvider>
-      <FinanceProvider>
+      <AccountProvider>
         <WorkspaceApp />
-      </FinanceProvider>
+      </AccountProvider>
     </ThemeProvider>
   );
 }

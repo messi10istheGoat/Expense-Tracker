@@ -141,23 +141,19 @@ test('search and keyboard shortcuts are functional', async ({ page }) => {
 test('backup validation protects data and valid restore requires confirmation', async ({ page }) => {
   await route(page, 'settings');
   const before = await stored(page);
-  await page
-    .getByLabel('Choose Spendwise backup')
-    .setInputFiles({
-      name: 'invalid.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from('{"version": 999}'),
-    });
+  await page.getByLabel('Choose Spendwise backup').setInputFiles({
+    name: 'invalid.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{"version": 999}'),
+  });
   await expect(page.getByRole('alert')).toContainText('not a valid Spendwise backup');
   expect((await stored(page)).transactions.length).toBe(before.transactions.length);
   const backup = { ...before, profile: { ...before.profile, name: 'Restored' } };
-  await page
-    .getByLabel('Choose Spendwise backup')
-    .setInputFiles({
-      name: 'backup.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(JSON.stringify(backup)),
-    });
+  await page.getByLabel('Choose Spendwise backup').setInputFiles({
+    name: 'backup.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(backup)),
+  });
   await expect(page.getByRole('heading', { name: 'Restore this backup?' })).toBeVisible();
   expect((await stored(page)).profile.name).toBe(before.profile.name);
   await page.getByRole('button', { name: 'Replace & restore', exact: true }).click();
@@ -173,13 +169,14 @@ test('personal reset is confirmed and dark theme persists', async ({ page }) => 
   await expect.poll(async () => (await stored(page)).transactions.length).toBe(0);
   expect((await stored(page)).demo).toBe(false);
   await route(page, 'overview');
-  await expect(page.getByText('Your first money moment awaits')).toBeVisible();
+  await expect(page.getByText('No transactions yet')).toBeVisible();
 });
 
 test('internal transfer changes account records without counting an expense', async ({ page }) => {
   await route(page, 'accounts');
   const before = await stored(page);
   await page.getByRole('button', { name: 'Record transfer', exact: true }).click();
+  await page.getByRole('dialog').getByLabel('To', { exact: true }).selectOption('savings');
   await page.getByRole('dialog').getByLabel('Amount', { exact: false }).fill('75.50');
   await page.getByRole('dialog').getByRole('button', { name: 'Record transfer', exact: true }).click();
   const after = await stored(page);

@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 
 test.use({ reducedMotion: 'reduce' });
 const routes = {
-  overview: /Good /,
+  overview: 'Overview',
   transactions: 'Transactions',
   analytics: 'Analytics',
   accounts: 'Accounts',
@@ -12,7 +12,7 @@ const routes = {
   bills: 'Bills & subscriptions',
   insights: 'Insights',
   lab: 'Decision lab',
-  settings: 'Your little corner',
+  settings: 'Settings',
 };
 for (const mode of ['light', 'dark'] as const) {
   test(`Glassmorphism ${mode} covers every page, the Studio, and financial dialogs`, async ({ page }) => {

@@ -1,6 +1,10 @@
-# Spendwise · A life well spent
+# Spendwise · Personal finance, connected
 
-A responsive, local-first expense tracker for desktop and mobile. Built with React 19, TypeScript, Vite, Tailwind CSS, and Recharts. No backend, credentials, paid APIs, or environment variables are needed.
+A responsive personal-finance workspace for desktop web and Android, built with React 19, TypeScript, Vite, Recharts, Supabase and Capacitor.
+
+**Current status:** working local demo plus configurable customer authentication/cloud sync and an Android packaging foundation. No hosted backend, signed Android release or Play Store listing is provisioned by this repository. See the [setup and release checklist](docs/RELEASE.md) before enabling real customer accounts.
+
+The unconfigured preview needs no credentials and opens a clearly labeled local demo. Set the two public values in `.env.example` after provisioning Supabase to enable real email/password sign-in, confirmation/recovery, customer-specific records and revision-checked cross-device sync.
 
 ## What you can do
 
@@ -8,14 +12,17 @@ A responsive, local-first expense tracker for desktop and mobile. Built with Rea
 - **Transactions:** add, edit, delete, search, filter by month/type/category/account/status, sort, paginate, bulk-clear, bulk-delete, and export the filtered results as CSV.
 - **Analytics:** a dedicated section after Transactions with date/account/category/status filters, equal-length comparisons, daily/weekly/monthly charts, category and merchant drill-down, weekday averages, account activity, prorated budget checks, editable source records, and report/transaction CSV exports.
 - **Quick capture:** enter `Coffee 6.50 yesterday #dining`, review the suggested fields, and save. This is a deterministic parser, not a remote AI service.
-- **Manual accounts:** checking, savings, credit, and cash; editable opening balances; internal transfers and credit-card-payment records that do not inflate income or expenses.
+- **Manual accounts:** create, rename, edit and remove bank, savings, credit and cash accounts; safely reassign linked records and merge balances; internal transfers and credit-card-payment records that do not inflate income or expenses.
+- **Categories:** manage income/expense names, pinning and priority in Settings; searchable entry pickers support explicit inline Add and immediately select the new category without losing the draft.
+- **Account sync:** real Supabase client integration, user-isolated database access, durable pending changes, offline cached reopening, explicit conflict decisions, account sign-out and a configurable deletion function. Setup is required.
+- **Android foundation:** checked-in Capacitor project, lifecycle/deep-link handling, back-button integration and native share-sheet exports. Native builds and store publication require Android tooling/release work.
 - **Budgets:** editable recurring monthly category limits, actual spending, remaining allowance, and over-budget warnings.
 - **Savings goals:** create/edit/delete goals, record savings progress, set monthly allocations and target dates, and estimate funding timelines.
 - **Bills & subscriptions:** create/edit/remove weekly, monthly, or annual reminders. Marking a bill paid creates one expense and advances its next due date. It never sends a real payment.
 - **Insights:** six-month cash-flow comparisons, category analysis, a 12-week spending fingerprint, explainable repeat-charge detection, and possible-duplicate review.
-- **Decision Lab:** preview a purchase’s effect on planned spending room, see its take-home work-hour cost, compare an alternative savings allocation, and simulate smaller discretionary spending.
+- **Decision Lab:** preview a purchase’s effect on planned spending room, see its take-home work-hour cost, compare an alternative savings allocation, and simulate a reduction in recorded expense totals.
 - **Pause pocket:** keep possible purchases in a persistent wishlist with a 24-hour reflection window. Nothing prevents you from deciding sooner; this is a nudge, not a lock.
-- **Data ownership:** validated JSON backup/restore, CSV export, cross-tab workspace updates, and explicit empty/demo workspace choices.
+- **Data ownership:** validated JSON backup/restore, CSV export, cross-tab demo updates, tab-local Undo, and explicit backup replacement. Cloud accounts use one active tab per browser profile to protect recovery data.
 - **Personalization:** name, planned take-home income, hourly rate, five currency display options, five persistent visual styles, light/dark/device color modes, and a larger reading size.
 - **Responsive navigation:** desktop sidebar, mobile bottom navigation, global search (`Ctrl/⌘ K`), new transaction shortcut (`N`), native focus-trapped dialogs, and reduced-motion support.
 - **Installable app:** web manifest and app icons; the production service worker caches the single-file app shell so it can reopen offline after a successful online visit.
@@ -88,14 +95,14 @@ The app starts with clearly labeled generated demo records. To use it for your o
 
 ## Privacy and scope
 
-Data is stored under `spendwise-workspace-v1` in this browser’s local storage, which is **not encrypted**. The app has no login, bank sync, cloud database, telemetry, background push reminders, receipt OCR, shared households, or real payment processing. Do not use it as a regulated accounting system or as financial advice.
+The demo is stored under `spendwise-workspace-v1`. Configured customer accounts use Supabase Auth and a user-owned cloud workspace. Cached customer snapshots and unsynced edits are scoped by user ID on the device. Device records, sign-in persistence and exported files have **no application-level encryption**; use a trusted device and sign out before sharing it. Read [storage, synchronization and release limitations](docs/RELEASE.md).
 
-Clearing browser data or using a different browser profile removes/hides that workspace. Offline caching preserves the app shell, not an additional backup of your records. Fonts are bundled locally; the production app makes no third-party font or API requests. A storage failure is shown explicitly, and unreadable stored data is not automatically overwritten until you change the workspace.
+There are no bank connections, real payment processing, receipt OCR, ads, telemetry, AI API calls or shared-household permissions. This is not a regulated accounting platform or financial advice. No bank-grade/end-to-end encryption claim is made. Fonts are bundled locally. The demo sends no financial data to a server; configured accounts necessarily communicate with your deployed Supabase service.
 
 ## Deploy to GitHub Pages
 
 1. Set **Settings → Pages → Build and deployment → Source → GitHub Actions**.
-2. Merge the changes into `main`. The workflow installs dependencies on Linux, runs unit tests, checks TypeScript, builds, runs desktop/mobile and production/offline checks, and publishes only `dist/`.
+2. Configure the public cloud Actions variables if deploying an account-enabled build (see [release setup](docs/RELEASE.md)); leave them empty for the demo. The workflow runs on `main` after changes are merged through your normal review process. The workflow installs dependencies on Linux, runs unit tests, checks TypeScript, builds, runs desktop/mobile and production/offline checks, and publishes only `dist/`.
 3. Visit `https://messi10isthegoat.github.io/Expense-Tracker/` after the workflow succeeds.
 
 If the changes are already on `main` when the source setting changes, use **Actions → Deploy to GitHub Pages → Run workflow** and select `main`. Pull requests run checks without deploying.
@@ -108,12 +115,16 @@ Never commit `node_modules/`, `dist/`, or generated test artifacts.
 
 - `src/finance/Analytics.tsx`, `analytics.ts`: interactive reports, validated date ranges, comparison/bucket math, and report exports. See [analytics semantics](docs/ANALYTICS.md).
 - `src/finance/model.ts`: data model, backup validation/migration, financial/date helpers, CSV and quick-entry logic.
-- `src/finance/store.tsx`: local persistence, storage failure reporting, currency display, notifications, cross-tab updates.
+- `src/finance/store.tsx`: validated financial updates, demo persistence, Undo, cloud change delivery and external-revision application.
+- `src/cloud/`: Auth/account UI, Supabase repository, durable CAS sync engine and single-tab write lease.
+- `src/platform/`, `capacitor.config.ts`, `android/`: native lifecycle, exports and Android packaging.
+- `supabase/`: SQL migration, local Auth configuration and server-only account-deletion function.
+- `src/finance/catalog.ts`, `CategoryPicker.tsx`, `WorkspaceManager.tsx`: editable catalogs and entry controls.
 - `src/finance/`: the ten application sections and shared dialogs.
 - `src/finance/appearance.ts`, `ThemeStudio.tsx`, `src/hooks/useTheme.tsx`: appearance preferences, migration, chooser, and provider.
 - `src/finance/styles/`: semantic palettes, base typography, layout, components, page styles, appearance treatments, and reduced-motion-aware interactions (imported by `spendwise.css`).
 - `src/lib/data.ts`: deterministic demo-data generator.
 - `public/`: install metadata, icons, and the production offline shell worker.
-- `tests/`: desktop/mobile finance workflows, eight-palette accessibility checks, appearance persistence, keyboard controls, system mode, and cross-tab tests.
+- `tests/`: desktop/mobile finance workflows, ten-palette accessibility checks, appearance persistence, keyboard controls, system mode, and cross-tab tests.
 - `scripts/verify-offline.mjs`: real subpath/offline production verification.
 - `docs/PRODUCT.md`: research notes, product choices, and deliberate boundaries.

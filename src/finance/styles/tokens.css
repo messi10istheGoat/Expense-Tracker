@@ -58,8 +58,8 @@
   --heatmap-2: #b5b5b5;
   --heatmap-3: #777;
   --heatmap-4: #292929;
-  --radius-card: 22px;
-  --radius-control: 12px;
+  --radius-card: 12px;
+  --radius-control: 8px;
   --shadow: 0 3px 16px #00000003;
   --shadow-hover: 0 10px 28px #0000000b;
 }
@@ -100,8 +100,8 @@
   --heatmap-2: #616161;
   --heatmap-3: #9f9f9f;
   --heatmap-4: #ededed;
-  --radius-card: 22px;
-  --radius-control: 12px;
+  --radius-card: 12px;
+  --radius-control: 8px;
   --shadow: 0 3px 16px #00000003;
   --shadow-hover: 0 10px 28px #0000000b;
 }
@@ -295,8 +295,8 @@
   --heatmap-2: #bfce95;
   --heatmap-3: #8aab42;
   --heatmap-4: #4c650a;
-  --radius-card: 22px;
-  --radius-control: 12px;
+  --radius-card: 12px;
+  --radius-control: 8px;
   --shadow: 0 3px 16px #00000003;
   --shadow-hover: 0 10px 28px #0000000b;
 }
@@ -336,8 +336,8 @@
   --heatmap-2: #536d27;
   --heatmap-3: #8aad34;
   --heatmap-4: #d2ff00;
-  --radius-card: 22px;
-  --radius-control: 12px;
+  --radius-card: 12px;
+  --radius-control: 8px;
   --shadow: 0 3px 20px #0002;
   --shadow-hover: 0 0 24px #b6db0012;
 }
@@ -385,8 +385,8 @@
   --heatmap-2: #b8c5d8;
   --heatmap-3: #869cc4;
   --heatmap-4: #495f94;
-  --radius-card: 22px;
-  --radius-control: 12px;
+  --radius-card: 12px;
+  --radius-control: 8px;
   --glass-panel: #f8fbffcc;
   --glass-chrome: #e6eefbcc;
   --glass-dialog: #f4f8fff2;
@@ -432,8 +432,8 @@
   --heatmap-2: #65749b;
   --heatmap-3: #a19ed1;
   --heatmap-4: #d9c0ff;
-  --radius-card: 22px;
-  --radius-control: 12px;
+  --radius-card: 12px;
+  --radius-control: 8px;
   --glass-panel: #132038cc;
   --glass-chrome: #101c30c9;
   --glass-dialog: #192a43f5;

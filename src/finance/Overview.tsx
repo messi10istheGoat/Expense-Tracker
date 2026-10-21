@@ -6,7 +6,6 @@ import {
   CalendarDays,
   ChevronRight,
   CircleHelp,
-  Leaf,
   MoreHorizontal,
   Sparkles,
   Target,
@@ -25,7 +24,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { CATEGORIES, EXPENSE_CATEGORIES } from '../lib/categories';
 import { balance, iso, monthKey, plan, totals, type Entry } from './model';
 import { useFinance } from './store';
 import { AnimatedValue, CategoryIcon, dateLabel, Empty, GoalGlyph, LinkButton, Panel, Progress } from './ui';
@@ -95,7 +93,7 @@ export function CashChart({ month }: { month: string }) {
           />
           <Area
             isAnimationActive={false}
-            type="monotone"
+            type="stepAfter"
             dataKey="Income"
             stroke={colors.income}
             strokeWidth={2.5}
@@ -103,7 +101,7 @@ export function CashChart({ month }: { month: string }) {
           />
           <Area
             isAnimationActive={false}
-            type="monotone"
+            type="stepAfter"
             dataKey="Expenses"
             stroke={colors.expenses}
             strokeWidth={2.5}
@@ -123,7 +121,7 @@ export function SpendingChart({
   month: string;
   onCategory?: (category: string) => void;
 }) {
-  const { w, money } = useFinance();
+  const { w, money, CATEGORIES, EXPENSE_CATEGORIES } = useFinance();
   const colors = useChartColors();
   const palette = colors.categories;
   const rows = w.transactions.filter((t) => t.date.startsWith(month) && t.type === 'expense');
@@ -144,7 +142,7 @@ export function SpendingChart({
       color: palette[4],
     });
   return !sum ? (
-    <Empty title="Your story starts here" text="Add an expense to see where your money goes." />
+    <Empty title="No expenses yet" text="Add an expense to see where your money goes." />
   ) : (
     <div className="spending-body">
       <div className="donut-chart" role="img" aria-label={`Spending breakdown: ${money(sum)} total`}>
@@ -246,31 +244,31 @@ export function Overview({
     {
       label: 'Total balance',
       amount: balance(w),
-      format: money,
+      format: (value: number) => money(value, true),
       icon: Wallet,
-      note: 'Across your 4 manual accounts',
+      note: `Across ${w.accounts.length} manual accounts`,
       type: 'neutral',
       spark: normalize(balanceTrend),
     },
     {
       label: 'Income',
       amount: t.income,
-      format: money,
+      format: (value: number) => money(value, true),
       icon: ArrowDownLeft,
       note: incomeChange
         ? `${incomeChange} ${t.income >= prev.income ? 'more' : 'less'} than prior period`
-        : 'Money coming your way',
+        : 'Recorded income this month',
       type: 'good',
       spark: normalize(cumulative.map((v) => v.income)),
     },
     {
       label: 'Expenses',
       amount: t.expense,
-      format: money,
+      format: (value: number) => money(value, true),
       icon: ArrowUpRight,
       note: expenseChange
         ? `${expenseChange} ${t.expense >= prev.expense ? 'more' : 'less'} than prior period`
-        : 'Every little moment, accounted for',
+        : 'Recorded expenses this month',
       type: t.expense <= prev.expense ? 'good' : 'warm',
       spark: normalize(cumulative.map((v) => v.expense)),
     },
@@ -286,15 +284,6 @@ export function Overview({
   ];
   return (
     <div className="page-stack overview-page">
-      <div className="welcome-note">
-        <span className="note-leaf">
-          <Leaf size={18} />
-        </span>
-        <p>
-          A little awareness today. <strong>A little more freedom tomorrow.</strong>
-        </p>
-        <span className="quiet-label">YOUR MONEY, MINDFULLY</span>
-      </div>
       <div className="metric-grid">
         {cards.map((c, i) => (
           <div className="metric-card" key={c.label}>
@@ -332,8 +321,8 @@ export function Overview({
       </div>
       <div className="overview-main-grid">
         <Panel
-          title="The ebb & flow"
-          sub="A clearer picture of money in and out"
+          title="Income & expenses"
+          sub="Cumulative cash flow for the selected month"
           action={
             <div className="chart-key">
               <span>
@@ -355,12 +344,12 @@ export function Overview({
             </span>
             <span className="chart-summary-pill">
               <TrendingUp size={13} />
-              {t.net >= 0 ? 'Room to grow' : 'Time to rebalance'}
+              {t.net >= 0 ? 'Positive cash flow' : 'Time to rebalance'}
             </span>
           </div>
           <CashChart month={month} />
           <div className="chart-foot">
-            <span>Little by little, it adds up.</span>
+            <span>Recorded totals · transfers excluded</span>
             <span>Cumulative · {w.profile.currency}</span>
           </div>
         </Panel>
@@ -368,38 +357,42 @@ export function Overview({
           <div className="breathing-top">
             <span>
               <span className="live-dot" />
-              ROOM TO BREATHE
+              MONTHLY PLAN
             </span>
             <CircleHelp size={17} aria-label="An estimate based on your monthly plan" />
           </div>
-          <p>Your planned spending room</p>
+          <p>Remaining to spend</p>
           <strong>
             {money(Math.max(0, p.remaining))}
             <span>this month</span>
           </strong>
-          <div className="breathing-art" aria-hidden="true">
-            <div className="orbit orbit-one" />
-            <div className="orbit orbit-two" />
-            <div className="orbit orbit-three" />
-            <div className="sprout">
-              <svg viewBox="0 0 130 110">
-                <path d="M64 100V52C63 36 42 25 25 29c-1 25 11 40 39 37" fill="#d0ddad" />
-                <path d="M64 78c0-32 22-58 49-57 1 31-15 52-49 57" fill="#a6c895" />
-                <path d="M64 100V65m0 13 31-39M64 64 39 43" fill="none" stroke="#1f563f" strokeWidth="2" />
-              </svg>
+          <dl className="plan-breakdown">
+            <div>
+              <dt>Planned income</dt>
+              <dd>{money(w.profile.monthlyIncome)}</dd>
             </div>
-            <span className="art-spark">✧</span>
-            <span className="art-spark two">✦</span>
-          </div>
+            <div>
+              <dt>Recorded spending</dt>
+              <dd>−{money(p.spent)}</dd>
+            </div>
+            <div>
+              <dt>Upcoming bills</dt>
+              <dd>−{money(p.bills)}</dd>
+            </div>
+            <div>
+              <dt>Savings allocations</dt>
+              <dd>−{money(p.goals)}</dd>
+            </div>
+          </dl>
           <div className="daily-room">
-            <span>A gentle daily guide</span>
+            <span>Daily estimate</span>
             <strong>
               {money(p.daily)}
               <small> / day</small>
             </strong>
           </div>
           <button onClick={() => navigate('lab')}>
-            Can I afford that little extra?
+            Review a purchase
             <ArrowUpRight size={17} />
           </button>
           <small>
@@ -411,15 +404,15 @@ export function Overview({
       </div>
       <div className="overview-main-grid">
         <Panel
-          title="Recent money moments"
-          sub="The everyday things that shape the bigger picture"
+          title="Recent transactions"
+          sub="Latest income and expenses in this period"
           action={<LinkButton onClick={() => navigate('transactions')}>View all</LinkButton>}
         >
           {recent.length ? (
             <TransactionRows rows={recent} onEdit={onEdit} compact />
           ) : (
             <Empty
-              title="Your first money moment awaits"
+              title="No transactions yet"
               text="Add a transaction to start seeing the bigger picture."
               action={
                 <button className="button" onClick={() => navigate('transactions')}>
@@ -430,7 +423,7 @@ export function Overview({
           )}
           <div className="panel-bottom">
             <span>
-              <span className="small-dot" /> {rows.length} moments captured this month
+              <span className="small-dot" /> {rows.length} transactions this month
             </span>
             <button onClick={() => navigate('transactions')} aria-label="See all transactions">
               <ArrowRight size={16} />
@@ -438,8 +431,8 @@ export function Overview({
           </div>
         </Panel>
         <Panel
-          title="Where it went"
-          sub="Every expense has a story"
+          title="Spending by category"
+          sub="Expense breakdown for the selected month"
           action={
             <button
               className="icon-button"
@@ -455,8 +448,8 @@ export function Overview({
       </div>
       <div className="overview-main-grid">
         <Panel
-          title="Dreams in the making"
-          sub="Not just saving money. Making things possible."
+          title="Savings goals"
+          sub="Progress toward your targets"
           action={<LinkButton onClick={() => navigate('goals')}>All goals</LinkButton>}
         >
           {w.goals.length ? (
@@ -492,8 +485,8 @@ export function Overview({
           )}
         </Panel>
         <Panel
-          title="Around the corner"
-          sub="A little heads-up for future you"
+          title="Upcoming payments"
+          sub="Next scheduled bills and subscriptions"
           action={<LinkButton onClick={() => navigate('bills')}>See all</LinkButton>}
         >
           <div className="upcoming-list">
@@ -527,7 +520,7 @@ export function Overview({
           <Sparkles size={23} />
         </span>
         <span>
-          <span className="eyebrow">A LITTLE EXPERIMENT. A SMARTER DECISION.</span>
+          <span className="eyebrow">PURCHASE PLANNING</span>
           <strong>The next purchase can wait. Your peace of mind shouldn’t.</strong>
           <small>Try a what-if in the Decision Lab. See the trade-offs before you spend.</small>
         </span>

@@ -12,6 +12,8 @@ import {
   ShieldCheck,
   Upload,
 } from 'lucide-react';
+import { useAccount } from '../cloud/CloudProvider';
+import { CategoryManager } from './WorkspaceManager';
 import { ThemeStudio } from './ThemeStudio';
 import { download, iso, makeWorkspace, STORAGE_KEY, validateWorkspace, type Workspace } from './model';
 import { useFinance } from './store';
@@ -19,6 +21,7 @@ import { Confirm, Modal, Panel } from './ui';
 
 export function Settings() {
   const { w, update, notify, storageError } = useFinance();
+  const account = useAccount();
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<Workspace | null>(null);
   const [error, setError] = useState('');
@@ -30,10 +33,13 @@ export function Settings() {
     const monthlyIncome = Number(d.get('income')),
       hourlyRate = Number(d.get('rate'));
     if (!name || ![monthlyIncome, hourlyRate].every((n) => Number.isFinite(n) && n >= 0)) return;
-    update((w) => ({
-      ...w,
-      profile: { name, monthlyIncome, hourlyRate, currency: String(d.get('currency')) },
-    }));
+    if (
+      !update((w) => ({
+        ...w,
+        profile: { name, monthlyIncome, hourlyRate, currency: String(d.get('currency')) },
+      }))
+    )
+      return;
     notify('Your preferences are saved.');
   };
   const restore = async (file?: File) => {
@@ -44,7 +50,12 @@ export function Settings() {
       return;
     }
     try {
-      setPending(validateWorkspace(JSON.parse(await file.text())));
+      const restored = validateWorkspace(JSON.parse(await file.text()));
+      if (account.session && restored.demo)
+        throw new Error(
+          'Demo backups cannot be imported into a customer account. Export a personal workspace instead.',
+        );
+      setPending(restored);
     } catch (e) {
       setError(
         e instanceof SyntaxError
@@ -58,10 +69,10 @@ export function Settings() {
   };
   return (
     <div className="page-stack settings-page">
-      <Panel className="appearance-panel">
-        <ThemeStudio />
-      </Panel>
-      <Panel title="Make yourself at home" sub="A few details to make your plan more useful.">
+      <Panel
+        title="Profile & preferences"
+        sub="Used for display and planning. Changing currency does not convert recorded amounts."
+      >
         <form className="settings-form" onSubmit={save}>
           <div className="form-grid">
             <label>
@@ -126,18 +137,27 @@ export function Settings() {
           </button>
         </form>
       </Panel>
+      <CategoryManager />
+      <Panel className="appearance-panel">
+        <ThemeStudio />
+      </Panel>
       <div className="info-note">
-        <HardDrive size={19} />
+        <Globe2 size={19} />
         <p>
-          <strong>A home-screen kind of app.</strong> Install Spendwise from your browser’s app menu on
-          desktop or Android. On iPhone/iPad, use Safari → Share → Add to Home Screen. After the first
-          successful online visit to the production site, the app shell can reopen offline. Each device has
-          its own workspace—use a JSON backup to move your records.
+          <strong>Web and Android.</strong>{' '}
+          {account.session
+            ? 'Your account uses the same records on signed-in devices. Changes made while disconnected wait on this device until you reconnect.'
+            : 'This demo stores records in this browser. Customer accounts use cloud sync when a backend is configured.'}{' '}
+          The Android project is included for packaging; Play Store publication is a separate release step.
         </p>
       </div>
       <Panel
-        title="Your data. Your hands."
-        sub="This workspace lives in this browser—not on a server."
+        title="Backup, storage & privacy"
+        sub={
+          account.session
+            ? 'Your records sync to your signed-in account. Back up before replacing data.'
+            : 'Demo records are stored in this browser. Keep a backup before clearing storage.'
+        }
         action={<HardDrive size={18} className="muted" />}
       >
         <div className="data-options">
@@ -156,7 +176,7 @@ export function Settings() {
               className="button secondary"
               onClick={() => {
                 download(`spendwise-backup-${iso()}.json`, JSON.stringify(w, null, 2));
-                notify('Backup downloaded. Keep it somewhere safe.');
+                notify('Backup export requested. Check your downloads or share destination.');
               }}
             >
               <ArrowDownToLine size={15} />
@@ -219,46 +239,53 @@ export function Settings() {
           <ShieldCheck size={27} />
         </span>
         <div>
-          <h3>Private by design. Honest by default.</h3>
+          <h3>Where your data is stored</h3>
           <p>
-            No account required. No analytics, ads, bank connections, or AI API calls. Data stays in browser
-            local storage, which is <strong>not encrypted</strong>. Anyone with access to this browser profile
-            may access it. Clearing browser data removes your workspace, so keep regular backups.
+            {account.session
+              ? 'Financial records are stored in your cloud account. A cached copy of your records, unsynced changes, and your sign-in session are stored on this device without application-level encryption. Sign out on shared devices. Exported backups are not encrypted.'
+              : 'The demo uses browser storage, which is not encrypted. Anyone with access to this browser profile may access it. Clearing browser data removes the local workspace. Customer accounts are separate and use cloud storage.'}{' '}
+            No bank connections, advertising trackers, or AI API calls are included.
           </p>
           <div>
             <span>
               <LockKeyhole size={13} />
-              No data sent to our servers
+              No bank credentials required
             </span>
             <span>
               <Database size={13} />
-              Stored on this device
+              {account.session ? 'Cloud account + device recovery' : 'Browser demo storage'}
             </span>
           </div>
         </div>
       </div>
-      <Panel
-        title="A fresh chapter"
-        sub={`You’re currently in ${w.demo ? 'demo mode with sample data' : 'your personal workspace'}.`}
-      >
-        <div className="reset-options">
-          <div>
-            <h3>Start your own journey</h3>
-            <p>Clear all sample data and begin with empty accounts, goals, and transactions.</p>
-            <button className="button secondary" onClick={() => setReset('personal')}>
-              Start an empty workspace
-            </button>
+      {!account.session && (
+        <Panel
+          title="A fresh chapter"
+          sub={`You’re currently in ${w.demo ? 'demo mode with sample data' : 'your personal workspace'}.`}
+        >
+          <div className="reset-options">
+            <div>
+              <h3>Start your own journey</h3>
+              <p>Clear all sample data and begin with empty accounts, goals, and transactions.</p>
+              {!account.session && (
+                <button className="button secondary" onClick={() => setReset('personal')}>
+                  Start an empty workspace
+                </button>
+              )}
+            </div>
+            <div>
+              <h3>Explore with sample data</h3>
+              <p>Replace the current workspace with a fresh set of demo records to explore the app.</p>
+              {!account.session && (
+                <button className="button secondary" onClick={() => setReset('demo')}>
+                  <RotateCcw size={14} />
+                  Reset to demo
+                </button>
+              )}
+            </div>
           </div>
-          <div>
-            <h3>Explore with sample data</h3>
-            <p>Replace the current workspace with a fresh set of demo records to explore the app.</p>
-            <button className="button secondary" onClick={() => setReset('demo')}>
-              <RotateCcw size={14} />
-              Reset to demo
-            </button>
-          </div>
-        </div>
-      </Panel>
+        </Panel>
+      )}
       {pending && (
         <Modal
           title="Restore this backup?"
@@ -286,7 +313,7 @@ export function Settings() {
             <button
               className="button"
               onClick={() => {
-                update(() => pending);
+                if (!update(() => pending, { replaceUnreadable: true })) return;
                 setPending(null);
                 notify('Backup restored. Welcome back.');
               }}
@@ -303,7 +330,7 @@ export function Settings() {
           action={reset === 'personal' ? 'Start empty' : 'Reset to demo'}
           onClose={() => setReset(null)}
           onConfirm={() => {
-            update(() => makeWorkspace(reset === 'demo'));
+            if (!update(() => makeWorkspace(reset === 'demo'), { replaceUnreadable: true })) return;
             notify(
               reset === 'personal'
                 ? 'A clean slate. Start by setting your income plan and opening balances.'

@@ -9,7 +9,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CATEGORIES, EXPENSE_CATEGORIES } from '../lib/categories';
 import { iso, monthKey, totals, type Entry } from './model';
 import { useFinance } from './store';
 import { dateLabel, Empty, Panel } from './ui';
@@ -25,7 +24,7 @@ export function Insights({
   onEdit: (t: Entry) => void;
   navigate: (page: string) => void;
 }) {
-  const { w, money } = useFinance();
+  const { w, money, CATEGORIES, EXPENSE_CATEGORIES } = useFinance();
   const colors = useChartColors();
   const rows = w.transactions.filter((t) => t.date.startsWith(month));
   const sum = totals(rows);

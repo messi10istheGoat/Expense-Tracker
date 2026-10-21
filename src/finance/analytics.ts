@@ -1,4 +1,4 @@
-import { ACCOUNTS, CATEGORIES, EXPENSE_CATEGORIES } from '../lib/categories';
+import { catalogMaps, defaultCategories, defaultAccounts, type Catalog } from './catalog';
 import type { AccountId, CategoryId } from '../lib/types';
 import { iso, round, type Entry } from './model';
 
@@ -138,7 +138,9 @@ export function analyzeReport(
   filters: ReportFilters,
   budgets: Record<string, number>,
   size: BucketSize,
+  catalog: Catalog = { categories: defaultCategories(), accounts: defaultAccounts() },
 ) {
+  const { CATEGORIES, ACCOUNTS, EXPENSE_CATEGORIES }=catalogMaps(catalog);
   const invalid = rangeError(filters, filters.end);
   if (invalid) throw new RangeError(invalid);
   const previousRange = priorRange(filters);

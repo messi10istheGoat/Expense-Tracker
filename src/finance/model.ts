@@ -1,4 +1,16 @@
-import { ACCOUNTS, CATEGORIES, EXPENSE_CATEGORIES } from '../lib/categories';
+import { exportFile } from '../platform/export';
+import {
+  catalogMaps,
+  defaultCategories,
+  defaultAccounts,
+  safeId,
+  validName,
+  normalize,
+  type Category,
+  type Account,
+  type Catalog,
+} from './catalog';
+import { CATEGORIES, EXPENSE_CATEGORIES } from '../lib/categories';
 import { generateDataset } from '../lib/data';
 import type { AccountId, CategoryId, Transaction } from '../lib/types';
 
@@ -46,6 +58,8 @@ export interface Wish {
 export interface Workspace {
   version: 1;
   demo: boolean;
+  categories: Category[];
+  accounts: Account[];
   transactions: Entry[];
   budgets: Record<string, number>;
   goals: Goal[];
@@ -61,6 +75,8 @@ export function makeWorkspace(demo = true, now = new Date()): Workspace {
   const base: Workspace = {
     version: 1,
     demo,
+    categories: defaultCategories(),
+    accounts: defaultAccounts(),
     transactions: [],
     budgets,
     goals: [],
@@ -80,7 +96,7 @@ export function makeWorkspace(demo = true, now = new Date()): Workspace {
   base.transactions = generateDataset(now)
     .transactions.filter((t) => t.date >= from)
     .map((t) => ({ ...t, date: iso(t.date) }));
-  const desired = { checking: 4280.5, savings: 12450, credit: -684.2, cash: 240 };
+  const desired: Record<string, number> = { checking: 4280.5, savings: 12450, credit: -684.2, cash: 240 };
   for (const id of Object.keys(desired) as AccountId[])
     base.openings[id] = round(
       desired[id] -
@@ -224,7 +240,7 @@ export function payBill(w: Workspace, id: string, today = iso()): Workspace {
         date: today,
         category: b.category,
         account: b.account,
-        type: CATEGORIES[b.category].type,
+        type: 'expense',
         status: 'cleared',
         recurring: true,
         note: `Bill occurrence: ${b.nextDue}`,
@@ -234,7 +250,12 @@ export function payBill(w: Workspace, id: string, today = iso()): Workspace {
     bills: w.bills.map((x) => (x.id === id ? { ...x, nextDue: advanceDue(x.nextDue, x.frequency) } : x)),
   };
 }
-export function parseQuickEntry(text: string, now = new Date()): Partial<Entry> | null {
+export function parseQuickEntry(
+  text: string,
+  now = new Date(),
+  catalog: Catalog = { categories: defaultCategories(), accounts: defaultAccounts() },
+): Partial<Entry> | null {
+  const { CATEGORIES } = catalogMaps(catalog);
   const match = text.match(/(?:^|\s)(\d+(?:\.\d{1,2})?)(?=\s|$)/);
   if (!match || Number(match[1]) <= 0) return null;
   const lower = text.toLowerCase();
@@ -246,22 +267,30 @@ export function parseQuickEntry(text: string, now = new Date()): Partial<Entry> 
     [['rent'], 'housing'],
     [['netflix', 'spotify', 'movie'], 'entertainment'],
   ];
-  const explicit = text.match(/#(\w+)/)?.[1];
-  const category: CategoryId =
-    explicit && Object.prototype.hasOwnProperty.call(CATEGORIES, explicit)
-      ? (explicit as CategoryId)
-      : (mappings.find(([words]) => words.some((w) => lower.includes(w)))?.[1] ?? 'shopping');
+  const explicit = text.match(/#(?:"([^"]+)"|([^\s]+))/u);
+  const named =
+    explicit &&
+    catalog.categories.find(
+      (c) => normalize(c.label) === normalize(explicit[1] ?? explicit[2]) || c.id === explicit[2],
+    );
+  const inferred = mappings.find(([words]) => words.some((w) => lower.includes(w)))?.[1] ?? 'shopping';
+  const inferredType = inferred === 'salary' ? 'income' : 'expense';
+  const category =
+    named?.id ??
+    (Object.prototype.hasOwnProperty.call(CATEGORIES, inferred)
+      ? inferred
+      : catalog.categories.find((c) => c.type === inferredType)?.id);
   const d = new Date(now);
   if (/\byesterday\b/i.test(text)) d.setDate(d.getDate() - 1);
   return {
     merchant:
       text
         .replace(match[0], ' ')
-        .replace(/#\w+|\byesterday\b|\btoday\b/gi, '')
+        .replace(/#(?:"[^"]+"|[^\s]+)|\byesterday\b|\btoday\b/gi, '')
         .trim() || 'Quick entry',
     amount: Number(match[1]),
     category,
-    type: CATEGORIES[category].type,
+    type: category ? CATEGORIES[category].type : inferredType,
     date: iso(d),
   };
 }
@@ -278,7 +307,54 @@ export function validateWorkspace(value: unknown): Workspace {
     throw new Error('This is not a valid Spendwise backup. Your current data has not been changed.');
   };
   if (!value || typeof value !== 'object') return fail();
-  const w = value as Workspace;
+  const w = { ...value } as Workspace;
+  if (w.categories === undefined) w.categories = defaultCategories();
+  if (w.accounts === undefined) w.accounts = defaultAccounts();
+  if (
+    !Array.isArray(w.categories) ||
+    w.categories.length > 200 ||
+    !Array.isArray(w.accounts) ||
+    w.accounts.length > 100
+  )
+    return fail();
+  const idsC = new Set<string>(),
+    namesC = new Set<string>(),
+    idsA = new Set<string>(),
+    namesA = new Set<string>();
+  for (const c of w.categories) {
+    if (
+      !c ||
+      !safeId(c.id) ||
+      idsC.has(c.id) ||
+      !validName(c.label) ||
+      !['income', 'expense'].includes(c.type) ||
+      !/^#[0-9a-f]{6}$/i.test(c.color) ||
+      !Number.isInteger(c.priority) ||
+      c.priority < 0 ||
+      c.priority > 1000000 ||
+      typeof c.pinned !== 'boolean'
+    )
+      return fail();
+    const name = c.type + ':' + normalize(c.label);
+    if (namesC.has(name)) return fail();
+    idsC.add(c.id);
+    namesC.add(name);
+  }
+  for (const a of w.accounts) {
+    if (
+      !a ||
+      !safeId(a.id) ||
+      idsA.has(a.id) ||
+      !validName(a.label) ||
+      !['bank', 'cash', 'credit', 'savings'].includes(a.kind) ||
+      !/^#[0-9a-f]{6}$/i.test(a.color) ||
+      namesA.has(normalize(a.label))
+    )
+      return fail();
+    idsA.add(a.id);
+    namesA.add(normalize(a.label));
+  }
+  const { CATEGORIES, ACCOUNTS, EXPENSE_CATEGORIES } = catalogMaps(w);
   // Additive v1 migration: earlier backups did not include internal transfers.
   if (w.transfers === undefined) w.transfers = [];
   if (!Array.isArray(w.transfers) || w.transfers.length > 50000) return fail();
@@ -327,8 +403,24 @@ export function validateWorkspace(value: unknown): Workspace {
     w.profile.hourlyRate < 0
   )
     return fail();
-  if (!w.openings || !Object.keys(ACCOUNTS).every((a) => isNum(w.openings[a as AccountId]))) return fail();
-  if (!w.budgets || !EXPENSE_CATEGORIES.every((c) => isNum(w.budgets[c]) && w.budgets[c] >= 0)) return fail();
+  if (
+    !w.openings ||
+    Array.isArray(w.openings) ||
+    Object.keys(w.openings).length !== w.accounts.length ||
+    !w.accounts.every(
+      (a) => Object.prototype.hasOwnProperty.call(w.openings, a.id) && isNum(w.openings[a.id]),
+    )
+  )
+    return fail();
+  if (
+    !w.budgets ||
+    Array.isArray(w.budgets) ||
+    Object.keys(w.budgets).length !== EXPENSE_CATEGORIES.length ||
+    !EXPENSE_CATEGORIES.every(
+      (c) => Object.prototype.hasOwnProperty.call(w.budgets, c) && isNum(w.budgets[c]) && w.budgets[c] >= 0,
+    )
+  )
+    return fail();
   if (
     !Array.isArray(w.transactions) ||
     w.transactions.length > 50000 ||
@@ -394,14 +486,19 @@ export function validateWorkspace(value: unknown): Workspace {
   return w;
 }
 export function download(name: string, content: string, type = 'application/json') {
-  const url = URL.createObjectURL(new Blob([content], { type }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  void exportFile(name, content, type).catch(() =>
+    window.dispatchEvent(
+      new CustomEvent('spendwise:export-error', {
+        detail: 'The export was not saved. Please retry or choose another destination.',
+      }),
+    ),
+  );
 }
-export function csv(rows: Entry[]) {
+export function csv(
+  rows: Entry[],
+  catalog: Catalog = { categories: defaultCategories(), accounts: defaultAccounts() },
+) {
+  const { CATEGORIES, ACCOUNTS } = catalogMaps(catalog);
   const cell = (v: string) => `"${(/^(?:\s*[=+\-@]|[\t\r])/.test(v) ? "'" : '') + v.replace(/"/g, '""')}"`;
   return [
     'Date,Merchant,Type,Category,Account,Amount,Status,Note',
@@ -420,4 +517,18 @@ export function csv(rows: Entry[]) {
         .join(','),
     ),
   ].join('\r\n');
+}
+
+/** Flat financial records: compare values, independent of PostgreSQL JSONB key ordering. */
+export function assertUnchanged(current: object | undefined, original: object, label: string) {
+  const stable = (value: object) =>
+    JSON.stringify(
+      Object.entries(value)
+        .filter(([, v]) => v !== undefined)
+        .sort(([a], [b]) => a.localeCompare(b)),
+    );
+  if (!current || stable(current) !== stable(original))
+    throw new Error(
+      `${label} changed or was removed. Close this form and reopen the latest record before saving.`,
+    );
 }

@@ -1,21 +1,9 @@
 export type TxType = "income" | "expense";
 
-export type ExpenseCategoryId =
-  | "housing"
-  | "groceries"
-  | "dining"
-  | "transport"
-  | "utilities"
-  | "shopping"
-  | "entertainment"
-  | "health"
-  | "travel";
-
-export type IncomeCategoryId = "salary" | "freelance" | "investments" | "refunds";
-
-export type CategoryId = ExpenseCategoryId | IncomeCategoryId;
-
-export type AccountId = "checking" | "credit" | "savings" | "cash";
+export type ExpenseCategoryId = string;
+export type IncomeCategoryId = string;
+export type CategoryId = string;
+export type AccountId = string;
 
 export type TxStatus = "cleared" | "pending";
 
