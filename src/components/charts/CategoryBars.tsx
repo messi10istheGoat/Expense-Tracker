@@ -9,7 +9,7 @@ import { EmptyState } from "../ui/EmptyState";
 import { Panel } from "../ui/Panel";
 import { TooltipCard, TooltipRow, type TipProps } from "./ChartTooltip";
 
-type Row = { key: string; label: string; rangeLabel: string; __top: CategoryId | null; __total: number } & Partial<Record<CategoryId, number>>;
+type Row = { key: string; label: string; rangeLabel: string; __top: CategoryId | null; __total: number } & Record<string, string | number | null | undefined>;
 
 interface CategoryBarsProps {
   series: SeriesPoint[];
@@ -25,7 +25,7 @@ const GRAN_LABEL: Record<Granularity, string> = { day: "Daily", week: "Weekly", 
 function StackTooltip({ active, payload, cats, highlight }: TipProps<Row> & { cats: CategoryId[]; highlight: CategoryId | null }) {
   const row = active ? payload?.[0]?.payload : undefined;
   if (!row) return null;
-  const items = cats.map((c) => ({ c, v: row[c] ?? 0 })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
+  const items = cats.map((c) => ({ c, v: Number(row[c] ?? 0) })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
   return (
     <TooltipCard title={row.rangeLabel} footer={<span className="flex justify-between font-medium text-slate-600 dark:text-slate-300"><span>Total</span><span className="tabular-nums">{fmtCurrency(row.__total, 2)}</span></span>}>
       {items.length === 0 && <p className="text-slate-400">No activity</p>}

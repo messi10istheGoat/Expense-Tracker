@@ -1,4 +1,4 @@
-/* Appearance is organized by responsibility rather than layers of overrides. */
+/* Semantic theme tokens, shared components, and responsive product layout. */
 @import './styles/tokens.css';
 @import './styles/base.css';
 @import './styles/layout.css';
@@ -8,3 +8,5 @@
 @import './styles/analytics.css';
 @import './styles/glass.css';
 @import './styles/motion.css';
+
+@import './styles/product.css';

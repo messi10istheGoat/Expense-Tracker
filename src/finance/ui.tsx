@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 import { useTheme } from '../hooks/useTheme';
-import { CATEGORIES } from '../lib/categories';
+import { useFinance } from './store';
 import type { CategoryId } from '../lib/types';
 
 export function Panel({
@@ -66,7 +66,8 @@ export function Empty({ title, text, action }: { title: string; text: string; ac
   );
 }
 export function CategoryIcon({ id, size = 18 }: { id: CategoryId; size?: number }) {
-  const c = CATEGORIES[id];
+  const { CATEGORIES }=useFinance();
+  const c=CATEGORIES[id];
   const { isDark, style } = useTheme();
   const contrastColors: Partial<Record<CategoryId, string>> = {
     utilities: '#8c6900',

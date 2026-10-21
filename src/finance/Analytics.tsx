@@ -33,7 +33,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { ACCOUNTS, CATEGORIES } from '../lib/categories';
 import { useChartColors } from '../hooks/useTheme';
 import {
   analyzeReport,
@@ -97,7 +96,7 @@ interface Drill {
   label: string;
 }
 export function Analytics({ onEdit, onAdd }: { onEdit: (entry: Entry) => void; onAdd: () => void }) {
-  const { w, money, notify } = useFinance();
+  const { w, money, notify, CATEGORIES, ACCOUNTS } = useFinance();
   const colors = useChartColors();
   const [filters, setFilters] = useState(initialFilters);
   const [preset, setPreset] = useState<ReportPreset>('month');
@@ -113,8 +112,8 @@ export function Analytics({ onEdit, onAdd }: { onEdit: (entry: Entry) => void; o
   const [page, setPage] = useState(1);
   const detailHeading = useRef<HTMLHeadingElement>(null);
   const report = useMemo(
-    () => analyzeReport(w.transactions, filters, w.budgets, size),
-    [w.transactions, w.budgets, filters, size],
+    () => analyzeReport(w.transactions, filters, w.budgets, size, w),
+    [w.transactions, w.budgets, filters, size, w.categories, w.accounts],
   );
   const rows = useMemo(
     () =>
@@ -863,7 +862,7 @@ export function Analytics({ onEdit, onAdd }: { onEdit: (entry: Entry) => void; o
             onClick={() => {
               download(
                 `spendwise-analytics-transactions-${filters.start}-${filters.end}.csv`,
-                csv(rows),
+                csv(rows, w),
                 'text/csv;charset=utf-8',
               );
               notify(`${rows.length} matching transaction records exported.`);

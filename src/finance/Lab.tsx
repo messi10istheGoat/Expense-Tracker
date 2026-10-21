@@ -48,8 +48,7 @@ export function Lab({ onCapture }: { onCapture: (draft: Partial<Entry>) => void 
     .filter(
       (t) =>
         t.type === 'expense' &&
-        new Date(`${t.date}T12:00:00`).getTime() >= Date.now() - 30 * 86400000 &&
-        ['dining', 'shopping', 'entertainment'].includes(t.category),
+        new Date(`${t.date}T12:00:00`).getTime() >= Date.now() - 30 * 86400000,
     )
     .reduce((s, t) => s + t.amount, 0);
   const freed = round((last30 * cut) / 100);
@@ -165,7 +164,7 @@ export function Lab({ onCapture }: { onCapture: (draft: Partial<Entry>) => void 
                 className="button secondary"
                 disabled={n < 0.01}
                 onClick={() =>
-                  onCapture({ merchant: name, amount: n, category: 'shopping', type: 'expense' })
+                  onCapture({ merchant: name, amount: n, category: w.categories.find((c)=>c.type==='expense')?.id, type: 'expense' })
                 }
               >
                 Log the purchase
@@ -185,7 +184,7 @@ export function Lab({ onCapture }: { onCapture: (draft: Partial<Entry>) => void 
                 <Sparkles size={25} />
               </div>
               <p>
-                Your dining, shopping & entertainment spending was <strong>{money(last30)}</strong> over the
+                Your recorded expense total was <strong>{money(last30)}</strong> over the
                 last 30 days.
               </p>
               <label className="slider-label" htmlFor="cut">

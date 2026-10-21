@@ -12,9 +12,19 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
-import { ACCOUNTS, CATEGORIES } from '../lib/categories';
 import type { AccountId, CategoryId, TxType } from '../lib/types';
-import { csv, download, iso, parseQuickEntry, round, totals, uid, type Entry } from './model';
+import {
+  assertUnchanged,
+  csv,
+  download,
+  iso,
+  parseQuickEntry,
+  round,
+  totals,
+  uid,
+  type Entry,
+} from './model';
+import { CategoryPicker } from './CategoryPicker';
 import { useFinance } from './store';
 import { CategoryIcon, Confirm, dateLabel, Empty, Modal } from './ui';
 
@@ -27,9 +37,14 @@ export function TransactionForm({
   draft?: Partial<Entry>;
   onClose: () => void;
 }) {
-  const { update, notify, w } = useFinance();
+  const { update, notify, w, CATEGORIES, ACCOUNTS, saveError } = useFinance();
   const [type, setType] = useState<TxType>(entry?.type ?? draft?.type ?? 'expense');
-  const [category, setCategory] = useState<CategoryId>(entry?.category ?? draft?.category ?? 'dining');
+  const [category, setCategory] = useState<CategoryId>(
+    entry?.category ??
+      draft?.category ??
+      Object.values(CATEGORIES).find((c) => c.type === (draft?.type ?? 'expense'))?.id ??
+      '',
+  );
   const [merchant, setMerchant] = useState(entry?.merchant ?? draft?.merchant ?? '');
   const [amount, setAmount] = useState(
     entry ? String(entry.amount) : draft?.amount ? String(draft.amount) : '',
@@ -60,24 +75,36 @@ export function TransactionForm({
       recurring: data.get('recurring') === 'on',
       note: String(data.get('note') ?? '').trim(),
     };
-    update((w) => ({
-      ...w,
-      transactions: entry
-        ? w.transactions.map((t) => (t.id === entry.id ? row : t))
-        : [row, ...w.transactions],
-    }));
+    const saved = update((current) => {
+      if (entry)
+        assertUnchanged(
+          current.transactions.find((t) => t.id === entry.id),
+          entry,
+          'This transaction',
+        );
+      return {
+        ...current,
+        transactions: entry
+          ? current.transactions.map((t) => (t.id === entry.id ? row : t))
+          : [row, ...current.transactions],
+      };
+    });
+    if (!saved) {
+      setError(saveError());
+      return;
+    }
     notify(entry ? 'Transaction updated.' : 'Transaction added. Your plan is up to date.');
     onClose();
   };
   const applyQuick = () => {
-    const p = parseQuickEntry(quick);
+    const p = parseQuickEntry(quick, new Date(), w);
     if (!p) {
       setError('Try “Coffee 6.50 yesterday” or “Salary 3500 #salary”.');
       return;
     }
     setMerchant(p.merchant!);
     setAmount(String(p.amount));
-    setCategory(p.category!);
+    setCategory(p.category ?? '');
     setType(p.type!);
     setDate(p.date!);
     setError('');
@@ -85,8 +112,8 @@ export function TransactionForm({
   };
   return (
     <Modal
-      title={entry ? 'Edit transaction' : 'A little money moment'}
-      sub={entry ? 'Make sure everything looks right.' : 'Track it now. Thank yourself later.'}
+      title={entry ? 'Edit transaction' : 'New transaction'}
+      sub="Record an income or expense in your account."
       onClose={onClose}
     >
       <form onSubmit={save}>
@@ -123,7 +150,8 @@ export function TransactionForm({
             className={type === 'expense' ? 'active' : ''}
             onClick={() => {
               setType('expense');
-              setCategory('dining');
+              if (type !== 'expense')
+                setCategory(Object.values(CATEGORIES).find((c) => c.type === 'expense')?.id ?? '');
             }}
           >
             <ArrowUpRight size={15} />
@@ -134,7 +162,8 @@ export function TransactionForm({
             className={type === 'income' ? 'active' : ''}
             onClick={() => {
               setType('income');
-              setCategory('salary');
+              if (type !== 'income')
+                setCategory(Object.values(CATEGORIES).find((c) => c.type === 'income')?.id ?? '');
             }}
           >
             <ArrowDownLeft size={15} />
@@ -171,21 +200,15 @@ export function TransactionForm({
             Date
             <input required type="date" value={date} max={iso()} onChange={(e) => setDate(e.target.value)} />
           </label>
-          <label>
-            Category
-            <select value={category} onChange={(e) => setCategory(e.target.value as CategoryId)}>
-              {Object.values(CATEGORIES)
-                .filter((c) => c.type === type)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-            </select>
-          </label>
+          <CategoryPicker value={category} onChange={setCategory} type={type} />
           <label>
             Account
-            <select name="account" defaultValue={entry?.account ?? 'checking'}>
+            <select
+              name="account"
+              required
+              aria-label="Account"
+              defaultValue={entry?.account ?? w.accounts[0]?.id ?? ''}
+            >
               {Object.values(ACCOUNTS).map((a) => (
                 <option value={a.id} key={a.id}>
                   {a.label}
@@ -250,7 +273,19 @@ export function TransactionForm({
           action="Delete transaction"
           onClose={() => setDeleting(false)}
           onConfirm={() => {
-            update((w) => ({ ...w, transactions: w.transactions.filter((t) => t.id !== entry.id) }));
+            if (
+              !update((w) => {
+                assertUnchanged(
+                  w.transactions.find((t) => t.id === entry.id),
+                  entry,
+                  'This transaction',
+                );
+                return { ...w, transactions: w.transactions.filter((t) => t.id !== entry.id) };
+              })
+            ) {
+              setError(saveError());
+              return;
+            }
             notify('Transaction deleted.');
             onClose();
           }}
@@ -268,7 +303,7 @@ export function TransactionRows({
   onEdit: (t: Entry) => void;
   compact?: boolean;
 }) {
-  const { money } = useFinance();
+  const { money, CATEGORIES, ACCOUNTS } = useFinance();
   return (
     <div className={`transaction-list ${compact ? 'compact' : ''}`}>
       {rows.map((t) => (
@@ -309,7 +344,7 @@ export function Transactions({
   onAdd: () => void;
   initialSearch?: string;
 }) {
-  const { w, update, notify, money } = useFinance();
+  const { w, update, notify, money, CATEGORIES, ACCOUNTS } = useFinance();
   const [q, setQ] = useState(initialSearch);
   const [type, setType] = useState('all');
   const [category, setCategory] = useState('all');
@@ -342,7 +377,7 @@ export function Transactions({
               ? a.date.localeCompare(b.date)
               : b.date.localeCompare(a.date),
         ),
-    [w.transactions, q, type, category, account, period, status, sort],
+    [w.transactions, CATEGORIES, q, type, category, account, period, status, sort],
   );
   const pages = Math.max(1, Math.ceil(rows.length / 12));
   const current = Math.min(page, pages);
@@ -388,7 +423,7 @@ export function Transactions({
             className="button secondary"
             aria-label="Export CSV"
             onClick={() => {
-              download(`spendwise-${iso()}.csv`, csv(rows), 'text/csv;charset=utf-8');
+              download(`spendwise-${iso()}.csv`, csv(rows, w), 'text/csv;charset=utf-8');
               notify(`${rows.length} transactions exported.`);
             }}
           >

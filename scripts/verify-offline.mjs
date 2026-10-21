@@ -53,17 +53,29 @@ try {
   page.on('request', (req) => {
     if (!req.url().startsWith(root) && !req.url().startsWith('data:')) external.push(req.url());
   });
+  const openDemo = async () => {
+    await page.waitForFunction(
+      () =>
+        document.querySelector('.workspace-main') ||
+        [...document.querySelectorAll('button')].some((b) => b.textContent.includes('Explore the demo')),
+    );
+    const demo = page.getByRole('button', { name: 'Explore the demo', exact: true });
+    if (await demo.count()) await demo.click();
+  };
   await page.goto(root);
+  await openDemo();
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
   await page.reload();
+  await openDemo();
   assert(
     await page.evaluate(() => !!navigator.serviceWorker.controller),
     'Service worker must control the page',
   );
   await context.setOffline(true);
   await page.reload();
+  await openDemo();
   await page.getByRole('button', { name: 'Add transaction', exact: true }).click();
   await page.getByLabel('Merchant or description').fill('Offline groceries');
   await page
@@ -72,6 +84,7 @@ try {
     .fill('12.25');
   await page.getByRole('dialog').getByRole('button', { name: 'Add transaction', exact: true }).click();
   await page.reload();
+  await openDemo();
   assert(
     await page.evaluate(() =>
       JSON.parse(localStorage.getItem('spendwise-workspace-v1')).transactions.some(
@@ -81,13 +94,15 @@ try {
     'Offline edits must persist',
   );
   const financialRecords = await page.evaluate(() => localStorage.getItem('spendwise-workspace-v1'));
-  await page.getByRole('button', { name: 'Open Style Studio' }).click();
+  await page.getByRole('button', { name: 'Open Style Studio' }).click({ noWaitAfter: true });
   const studio = page.getByRole('dialog', { name: 'Style Studio', exact: true });
+  await studio.waitFor({ state: 'visible' });
   await studio.getByRole('radio', { name: 'Neon theme' }).check();
   await studio.getByRole('button', { name: 'After hours', exact: false }).click();
   await studio.getByRole('button', { name: 'Larger', exact: true }).click();
   await studio.getByRole('button', { name: 'Close dialog' }).click();
   await page.reload();
+  await openDemo();
   assert.equal(await page.locator('html').getAttribute('data-style'), 'neon');
   assert.equal(await page.locator('html').getAttribute('data-text-size'), 'large');
   assert(await page.locator('html').evaluate((root) => root.classList.contains('dark')));
@@ -97,7 +112,7 @@ try {
     'Offline appearance changes must not modify financial records',
   );
   // The Glassmorphism landscape is embedded in the app shell, not a network dependency.
-  await page.getByRole('button', { name: 'Open Style Studio' }).click();
+  await page.getByRole('button', { name: 'Open Style Studio' }).click({ noWaitAfter: true });
   await page
     .getByRole('dialog', { name: 'Style Studio', exact: true })
     .getByRole('radio', { name: 'Glassmorphism theme', exact: true })
@@ -107,6 +122,7 @@ try {
     .getByRole('button', { name: 'Close dialog' })
     .click();
   await page.reload();
+  await openDemo();
   assert.equal(await page.locator('html').getAttribute('data-style'), 'glass');
   assert(
     (
@@ -115,11 +131,13 @@ try {
     'The glass landscape must be bundled and available offline',
   );
   await page.goto(`${root}#analytics`);
+  await openDemo();
   await page.getByRole('heading', { name: 'Analytics', exact: true }).waitFor();
   await page.getByLabel('Search analytics transactions', { exact: true }).fill('Offline groceries');
   assert.equal(await page.locator('.analytics-transactions tbody tr').count(), 1);
   assert((await page.locator('.analytics-transactions tbody').textContent()).includes('12.25'));
   await page.reload();
+  await openDemo();
   await page.getByRole('heading', { name: 'Analytics', exact: true }).waitFor();
   assert.equal(
     await page.evaluate(() => localStorage.getItem('spendwise-workspace-v1')),
@@ -127,10 +145,11 @@ try {
     'Offline analytics must preserve the source records',
   );
   await page.goto(root);
-  await page.getByRole('heading', { name: /Good / }).waitFor();
-  assert.equal(await page.getByRole('heading', { name: /Good / }).count(), 1);
+  await openDemo();
+  await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor();
+  assert.equal(await page.getByRole('heading', { name: 'Overview', exact: true }).count(), 1);
   assert.deepEqual(errors, []);
-  assert.deepEqual(external, [], 'The production app must not request external fonts or services');
+  assert.deepEqual(external, [], 'The demo must not request external fonts or financial services');
   console.log(
     'PASS: production subpath, service worker control, offline reload, offline transaction/appearance persistence, offline analytics, bundled glass landscape, and no third-party requests.',
   );

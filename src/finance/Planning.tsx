@@ -12,10 +12,10 @@ import {
   Target,
   Trash2,
 } from 'lucide-react';
-import { ACCOUNTS, CATEGORIES, EXPENSE_CATEGORIES } from '../lib/categories';
 import type { AccountId, CategoryId } from '../lib/types';
 import {
   balance,
+  assertUnchanged,
   goalColors,
   iso,
   localDate,
@@ -27,11 +27,13 @@ import {
   type Goal,
   type Transfer,
 } from './model';
+import { AccountEditor, AccountRemoval } from './WorkspaceManager';
+import { CategoryPicker } from './CategoryPicker';
 import { useFinance } from './store';
 import { CategoryIcon, Confirm, dateLabel, Empty, GoalGlyph, Modal, Panel, Progress } from './ui';
 
 export function Budgets({ month }: { month: string }) {
-  const { w, update, money, notify } = useFinance();
+  const { w, update, money, notify, CATEGORIES, EXPENSE_CATEGORIES } = useFinance();
   const [editing, setEditing] = useState<CategoryId | null>(null);
   const rows = EXPENSE_CATEGORIES.map((id) => ({
     id,
@@ -56,13 +58,9 @@ export function Budgets({ month }: { month: string }) {
     <div className="page-stack">
       <div className="budget-banner">
         <div>
-          <span className="eyebrow">A PLAN, NOT A RESTRICTION</span>
-          <h2>
-            Spend on what matters.
-            <br />
-            <span>Let the rest go.</span>
-          </h2>
-          <p>Your category limits repeat every month. Adjust them as life changes.</p>
+          <span className="eyebrow">MONTHLY BUDGET</span>
+          <h2>Your spending plan</h2>
+          <p>Category limits repeat monthly. Edit a category below to adjust its budget.</p>
         </div>
         <div className="budget-banner-total">
           <span>Left in your plan</span>
@@ -120,7 +118,7 @@ export function Budgets({ month }: { month: string }) {
           category’s spending allowance.
         </p>
       </div>
-      {editing && (
+      {editing && CATEGORIES[editing] && (
         <Modal
           title={`A plan for ${CATEGORIES[editing].label.toLowerCase()}`}
           sub="Choose a monthly limit that feels right for you."
@@ -153,7 +151,8 @@ export function Budgets({ month }: { month: string }) {
   );
 }
 function GoalForm({ goal, onClose }: { goal?: Goal; onClose: () => void }) {
-  const { w, update, notify } = useFinance();
+  const { w, update, notify, saveError } = useFinance();
+  const [error, setError] = useState('');
   const [color, setColor] = useState(goal?.color ?? goalColors[0]);
   const [emoji, setEmoji] = useState(goal?.emoji ?? '🌱');
   const submit = (e: FormEvent<HTMLFormElement>) => {
@@ -174,14 +173,27 @@ function GoalForm({ goal, onClose }: { goal?: Goal; onClose: () => void }) {
       deadline: String(d.get('deadline')),
     };
     if (!g.name) return;
-    update((w) => ({ ...w, goals: goal ? w.goals.map((x) => (x.id === goal.id ? g : x)) : [...w.goals, g] }));
-    notify(goal ? 'Goal updated.' : 'A new dream, with a plan. Goal created.');
+    if (
+      !update((w) => {
+        if (goal)
+          assertUnchanged(
+            w.goals.find((x) => x.id === goal.id),
+            goal,
+            'This goal',
+          );
+        return { ...w, goals: goal ? w.goals.map((x) => (x.id === goal.id ? g : x)) : [...w.goals, g] };
+      })
+    ) {
+      setError(saveError());
+      return;
+    }
+    notify(goal ? 'Goal updated.' : 'Savings goal created.');
     onClose();
   };
   return (
     <Modal
-      title={goal ? 'Refine your dream' : 'Make space for a dream'}
-      sub="Give your savings something to look forward to."
+      title={goal ? 'Edit savings goal' : 'New savings goal'}
+      sub="Set a target and monthly savings allocation."
       onClose={onClose}
     >
       <form onSubmit={submit}>
@@ -276,6 +288,11 @@ function GoalForm({ goal, onClose }: { goal?: Goal; onClose: () => void }) {
           Goals are earmarks, not account transfers. Your monthly allocation is reserved in the spending-room
           estimate; it does not move money automatically.
         </p>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
         <div className="form-actions">
           <button type="button" className="button secondary" onClick={onClose}>
             Cancel
@@ -310,13 +327,10 @@ export function Goals() {
     <div className="page-stack">
       <div className="section-intro">
         <div>
-          <span className="eyebrow">YOUR FUTURE HAS GOOD THINGS IN STORE</span>
-          <h2>
-            Small steps. <em>Wonderful possibilities.</em>
-          </h2>
+          <span className="eyebrow">SAVINGS PROGRESS</span>
+          <h2>Your savings targets</h2>
           <p>
-            {money(w.goals.reduce((s, g) => s + g.saved, 0))} earmarked across {w.goals.length} dreams. Keep
-            going.
+            {money(w.goals.reduce((s, g) => s + g.saved, 0))} earmarked across {w.goals.length} goals.
           </p>
         </div>
         <button className="button" onClick={() => setForm('new')}>
@@ -431,7 +445,7 @@ export function Goals() {
       )}
       {deleting && (
         <Confirm
-          title="Let this goal go?"
+          title="Delete this savings goal?"
           text={`“${deleting.name}” will be removed. No account balances or transactions will change.`}
           action="Delete goal"
           onClose={() => setDeleting(null)}
@@ -445,7 +459,9 @@ export function Goals() {
   );
 }
 function BillForm({ bill, onClose }: { bill?: Bill; onClose: () => void }) {
-  const { update, notify, w } = useFinance();
+  const { update, notify, w, ACCOUNTS, EXPENSE_CATEGORIES, saveError } = useFinance();
+  const [error, setError] = useState('');
+  const [category, setCategory] = useState(bill?.category ?? EXPENSE_CATEGORIES[0] ?? '');
   const save = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const d = new FormData(e.currentTarget);
@@ -456,19 +472,31 @@ function BillForm({ bill, onClose }: { bill?: Bill; onClose: () => void }) {
       id: bill?.id ?? uid(),
       name,
       amount: round(n),
-      category: d.get('category') as CategoryId,
+      category,
       account: d.get('account') as AccountId,
       nextDue: String(d.get('date')),
       frequency: d.get('frequency') as Bill['frequency'],
     };
-    update((w) => ({ ...w, bills: bill ? w.bills.map((x) => (x.id === bill.id ? b : x)) : [...w.bills, b] }));
+    const saved = update((w) => {
+      if (bill)
+        assertUnchanged(
+          w.bills.find((x) => x.id === bill.id),
+          bill,
+          'This recurring payment',
+        );
+      return { ...w, bills: bill ? w.bills.map((x) => (x.id === bill.id ? b : x)) : [...w.bills, b] };
+    });
+    if (!saved) {
+      setError(saveError());
+      return;
+    }
     notify('Recurring payment saved.');
     onClose();
   };
   return (
     <Modal
-      title={bill ? 'Edit recurring payment' : 'One less surprise'}
-      sub="Keep a little space for what’s coming up."
+      title={bill ? 'Edit recurring payment' : 'New recurring payment'}
+      sub="Set the amount, schedule, category and account."
       onClose={onClose}
     >
       <form onSubmit={save}>
@@ -508,19 +536,15 @@ function BillForm({ bill, onClose }: { bill?: Bill; onClose: () => void }) {
               <option value="weekly">Weekly</option>
             </select>
           </label>
-          <label>
-            Category
-            <select name="category" defaultValue={bill?.category ?? 'utilities'}>
-              {EXPENSE_CATEGORIES.map((id) => (
-                <option key={id} value={id}>
-                  {CATEGORIES[id].label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <CategoryPicker value={category} onChange={setCategory} type="expense" />
           <label className="full">
             Pay from
-            <select name="account" defaultValue={bill?.account ?? 'checking'}>
+            <select
+              name="account"
+              required
+              aria-label="Pay from"
+              defaultValue={bill?.account ?? w.accounts[0]?.id ?? ''}
+            >
               {Object.values(ACCOUNTS).map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.label}
@@ -533,6 +557,11 @@ function BillForm({ bill, onClose }: { bill?: Bill; onClose: () => void }) {
           Reminders appear here in the app. No payments are made automatically, and no background
           notifications are sent.
         </p>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
         <div className="form-actions">
           <button type="button" className="button secondary" onClick={onClose}>
             Cancel
@@ -544,7 +573,8 @@ function BillForm({ bill, onClose }: { bill?: Bill; onClose: () => void }) {
   );
 }
 export function Bills() {
-  const { w, update, money, notify } = useFinance();
+  const { w, update, money, notify, ACCOUNTS, saveError } = useFinance();
+  const [paymentError, setPaymentError] = useState('');
   const [form, setForm] = useState<Bill | 'new' | null>(null);
   const [deleting, setDeleting] = useState<Bill | null>(null);
   const [paying, setPaying] = useState<Bill | null>(null);
@@ -675,10 +705,15 @@ export function Bills() {
           onClose={() => setPaying(null)}
         >
           <p className="muted leading-copy">
-            Add a {money(paying.amount, true)} expense to {ACCOUNTS[paying.account].label} dated today for the
-            occurrence due {dateLabel(paying.nextDue, true)}? Check your transaction history first to avoid
-            logging it twice.
+            Add a {money(paying.amount, true)} expense to {ACCOUNTS[paying.account]?.label ?? 'your account'}{' '}
+            dated today for the occurrence due {dateLabel(paying.nextDue, true)}? Check your transaction
+            history first to avoid logging it twice.
           </p>
+          {paymentError && (
+            <p className="form-error" role="alert">
+              {paymentError}
+            </p>
+          )}
           <div className="form-actions">
             <button className="button secondary" onClick={() => setPaying(null)}>
               Not yet
@@ -686,7 +721,19 @@ export function Bills() {
             <button
               className="button"
               onClick={() => {
-                update((w) => payBill(w, paying.id));
+                if (
+                  !update((w) => {
+                    assertUnchanged(
+                      w.bills.find((b) => b.id === paying.id),
+                      paying,
+                      'This bill occurrence',
+                    );
+                    return payBill(w, paying.id);
+                  })
+                ) {
+                  setPaymentError(saveError());
+                  return;
+                }
                 setPaying(null);
                 notify('Payment recorded. Next due date updated.');
               }}
@@ -700,8 +747,10 @@ export function Bills() {
   );
 }
 export function Accounts() {
-  const { w, update, money, notify } = useFinance();
+  const { w, update, money, notify, ACCOUNTS } = useFinance();
   const [editing, setEditing] = useState<AccountId | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);
   const [deleting, setDeleting] = useState<Transfer | null>(null);
   const [transferError, setTransferError] = useState('');
@@ -729,30 +778,32 @@ export function Accounts() {
     setTransferError('');
     notify('Transfer recorded. Your total balance is unchanged.');
   };
-  const save = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editing) return;
-    const n = Number(new FormData(e.currentTarget).get('opening'));
-    if (!Number.isFinite(n)) return;
-    update((w) => ({ ...w, openings: { ...w.openings, [editing]: round(n) } }));
-    notify('Opening balance updated.');
-    setEditing(null);
-  };
   return (
     <div className="page-stack">
       <div className="section-intro">
         <div>
-          <span className="eyebrow">ONE CLEAR PICTURE</span>
-          <h2>
-            A home for <em>all your money.</em>
-          </h2>
-          <p>Manual accounts. No bank connection, no credentials, no surprises.</p>
+          <span className="eyebrow">MANUAL ACCOUNTS</span>
+          <h2>Account balances</h2>
+          <p>Manually tracked balances. No bank connection is required.</p>
         </div>
         <span className="account-total">
           <small>Combined net balance</small>
           <strong>{money(balance(w), true)}</strong>
         </span>
       </div>
+      <div className="account-tools">
+        <p>{w.accounts.length} manual accounts</p>
+        <button className="button" onClick={() => setAdding(true)}>
+          <Plus size={16} />
+          New account
+        </button>
+      </div>
+      {!w.accounts.length && (
+        <Empty
+          title="No accounts yet"
+          text="Create an account before recording transactions or recurring bills."
+        />
+      )}
       <div className="account-grid">
         {Object.values(ACCOUNTS).map((a) => (
           <section className={`sw-panel account-card account-${a.id}`} key={a.id}>
@@ -766,6 +817,13 @@ export function Accounts() {
               >
                 <Pencil size={16} />
               </button>
+              <button
+                className="icon-button"
+                aria-label={`Remove ${a.label} account`}
+                onClick={() => setRemoving(a.id)}
+              >
+                <Trash2 size={16} />
+              </button>
             </div>
             <h3>{a.label}</h3>
             <strong>{money(balance(w, a.id), true)}</strong>
@@ -777,10 +835,14 @@ export function Accounts() {
         ))}
       </div>
       <Panel
-        title="Keep your money moving"
+        title="Internal transfers"
         sub="Savings transfers and credit card payments, without counting them as spending."
         action={
-          <button className="button secondary" onClick={() => setMoving(true)}>
+          <button
+            className="button secondary"
+            disabled={w.accounts.length < 2}
+            onClick={() => setMoving(true)}
+          >
             <ArrowRightLeft size={15} />
             Record transfer
           </button>
@@ -854,42 +916,14 @@ export function Accounts() {
           </div>
         </div>
       </Panel>
-      {editing && (
-        <Modal
-          title={`Set up ${ACCOUNTS[editing].label}`}
-          sub="Opening balance + recorded income − recorded expenses = current balance."
-          onClose={() => setEditing(null)}
-        >
-          <form onSubmit={save}>
-            <label>
-              Opening balance ({w.profile.currency})
-              <input
-                autoFocus
-                required
-                type="number"
-                name="opening"
-                step="0.01"
-                min="-1000000000"
-                max="1000000000"
-                defaultValue={w.openings[editing]}
-              />
-            </label>
-            <p className="form-hint">
-              Use the balance before your earliest logged transaction. Use a negative number for credit card
-              debt.
-            </p>
-            <div className="form-actions">
-              <button type="button" className="button secondary" onClick={() => setEditing(null)}>
-                Cancel
-              </button>
-              <button className="button">Save opening balance</button>
-            </div>
-          </form>
-        </Modal>
+      {adding && <AccountEditor onClose={() => setAdding(false)} />}
+      {editing && ACCOUNTS[editing] && (
+        <AccountEditor account={w.accounts.find((a) => a.id === editing)} onClose={() => setEditing(null)} />
       )}
+      {removing && <AccountRemoval id={removing} onClose={() => setRemoving(null)} />}
       {moving && (
         <Modal
-          title="A little money move"
+          title="Record a transfer"
           sub="Record a transfer between your own manual accounts."
           onClose={() => {
             setMoving(false);
@@ -900,7 +934,7 @@ export function Accounts() {
             <div className="form-grid">
               <label>
                 From
-                <select name="from" defaultValue="checking">
+                <select name="from" required aria-label="From" defaultValue={w.accounts[0]?.id}>
                   {Object.values(ACCOUNTS).map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.label}
@@ -910,7 +944,10 @@ export function Accounts() {
               </label>
               <label>
                 To
-                <select name="to" defaultValue="savings">
+                <select name="to" required aria-label="To" defaultValue="">
+                  <option value="" disabled>
+                    Choose account
+                  </option>
                   {Object.values(ACCOUNTS).map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.label}

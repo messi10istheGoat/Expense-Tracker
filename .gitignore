@@ -11,3 +11,7 @@ npm-debug.log*
 .arena/
 playwright-report/
 test-results/
+
+test-results-cloud/
+*.jks
+*.keystore
