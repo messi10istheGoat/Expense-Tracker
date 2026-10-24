@@ -13,7 +13,6 @@ import {
   FlaskConical,
   HardDrive,
   LayoutDashboard,
-  Leaf,
   Menu,
   Moon,
   Palette,
@@ -27,11 +26,14 @@ import {
   Sun,
   Target,
   Wallet,
+  LockKeyhole,
 } from 'lucide-react';
-import { AccountProvider, useAccount } from './cloud/CloudProvider';
-import { AccountControls, CloudStatus } from './cloud/AccountControls';
+import { FirstRun } from './product/Onboarding';
+import { ProGate, SubscriptionProvider, useSubscription } from './product/Subscription';
+import { isProFeature } from './product/features';
+import { NativeLifecycle } from './platform/native';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
-import { useFinance } from './finance/store';
+import { FinanceProvider, useFinance } from './finance/store';
 import { monthKey, type Entry } from './finance/model';
 import { Overview } from './finance/Overview';
 import { TransactionForm, Transactions } from './finance/Transactions';
@@ -198,7 +200,7 @@ function SearchDialog({
 }
 function WorkspaceApp() {
   const { w, storageError, notify } = useFinance();
-  const account = useAccount();
+  const { isPro, openPaywall } = useSubscription();
   const { isDark, toggle, style } = useTheme();
   const [page, setPage] = useState(getPage);
   const [month, setMonth] = useState(monthKey());
@@ -211,6 +213,11 @@ function WorkspaceApp() {
   const [transaction, setTransaction] = useState<{ entry?: Entry; draft?: Partial<Entry> } | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const navigate = (id: string) => {
+    if (isProFeature(id) && !isPro) {
+      setMobileOpen(false);
+      openPaywall(id);
+      return;
+    }
     setPage(id);
     window.location.hash = id;
     setMobileOpen(false);
@@ -299,10 +306,9 @@ function WorkspaceApp() {
         <div className="workspace-switch">
           <span className="workspace-avatar">{w.profile.name.slice(0, 1).toUpperCase()}</span>
           <div>
-            <strong>My workspace</strong>
-            <small>{account.session ? 'Personal account' : 'Demo workspace'}</small>
+            <strong>{w.profile.name}’s workspace</strong>
+            <small>{isPro ? 'Pro' : 'Free'} · on this device</small>
           </div>
-          <Leaf size={14} />
         </div>
         <nav aria-label="Main navigation">
           {pages.map((p) => (
@@ -315,7 +321,9 @@ function WorkspaceApp() {
               >
                 <p.icon size={18} strokeWidth={1.7} />
                 <span>{p.label}</span>
-                {p.id === 'lab' && <small className="new-badge">NEW</small>}
+                {isProFeature(p.id) && !isPro && (
+                  <LockKeyhole size={13} className="nav-lock" aria-label="Pro feature" />
+                )}
                 {p.id === 'bills' && due > 0 && <small className="nav-count">{due}</small>}
               </button>
             </div>
@@ -335,7 +343,10 @@ function WorkspaceApp() {
             <span>Help & shortcuts</span>
             <ArrowUpRight size={14} />
           </button>
-          <CloudStatus />
+          <div className="local-status">
+            <HardDrive size={13} />
+            Stored on this device
+          </div>
         </div>
       </aside>
       <div className="workspace-body">
@@ -378,39 +389,16 @@ function WorkspaceApp() {
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <span className="header-divider" />
-            <AccountControls />
+            <button className="button secondary plan-button" onClick={() => openPaywall()}>
+              {isPro ? 'Pro' : 'Get Pro'}
+            </button>
           </div>
         </header>
         <main id="workspace-content" ref={mainRef} tabIndex={-1} className="workspace-main">
           {!online && (
             <div className="offline-banner" role="status">
               <HardDrive size={15} />
-              <span>You’re offline. Your changes stay on this device until you reconnect.</span>
-            </div>
-          )}
-          {account.sync && ['conflict', 'error', 'offline'].includes(account.sync.status) && (
-            <div className="storage-banner sync-banner" role="status">
-              <span>
-                {account.sync.status === 'conflict'
-                  ? 'Another device saved different records. Review both versions before continuing.'
-                  : account.sync.error ||
-                    'Changes have not reached the cloud. Keep this app open or export a backup.'}
-              </span>
-              <button onClick={() => window.dispatchEvent(new Event('spendwise:open-account'))}>
-                Review sync
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          )}
-          {!account.session && (
-            <div className="demo-context">
-              <span>
-                <strong>{w.demo ? 'Demo workspace' : 'Local workspace'}</strong> ·{' '}
-                {w.demo ? 'Sample records. ' : ''}Saved only in this browser.
-              </span>
-              <button onClick={account.openLogin}>
-                Use your own account <ArrowRight size={13} />
-              </button>
+              <span>You’re offline. Tracking and local saving still work. No connection needed.</span>
             </div>
           )}
           {storageError && (
@@ -467,13 +455,37 @@ function WorkspaceApp() {
           </div>
           {page === 'overview' && <Overview month={month} navigate={navigate} onEdit={onEdit} />}
           {page === 'transactions' && <Transactions onEdit={onEdit} onAdd={() => setTransaction({})} />}
-          {page === 'analytics' && <Analytics onEdit={onEdit} onAdd={() => setTransaction({})} />}
+          {page === 'analytics' && (
+            <ProGate feature="analytics">
+              <Analytics onEdit={onEdit} onAdd={() => setTransaction({})} />
+            </ProGate>
+          )}
           {page === 'accounts' && <Accounts />}
-          {page === 'budgets' && <Budgets month={month} />}
-          {page === 'goals' && <Goals />}
-          {page === 'bills' && <Bills />}
-          {page === 'insights' && <Insights month={month} onEdit={onEdit} navigate={navigate} />}
-          {page === 'lab' && <Lab onCapture={(draft) => setTransaction({ draft })} />}
+          {page === 'budgets' && (
+            <ProGate feature="budgets">
+              <Budgets month={month} />
+            </ProGate>
+          )}
+          {page === 'goals' && (
+            <ProGate feature="goals">
+              <Goals />
+            </ProGate>
+          )}
+          {page === 'bills' && (
+            <ProGate feature="bills">
+              <Bills />
+            </ProGate>
+          )}
+          {page === 'insights' && (
+            <ProGate feature="insights">
+              <Insights month={month} onEdit={onEdit} navigate={navigate} />
+            </ProGate>
+          )}
+          {page === 'lab' && (
+            <ProGate feature="lab">
+              <Lab onCapture={(draft) => setTransaction({ draft })} />
+            </ProGate>
+          )}
           {page === 'settings' && <Settings key={`${w.demo}-${w.profile.name}-${w.profile.currency}`} />}
           <footer className="workspace-footer">
             <span>
@@ -505,7 +517,7 @@ function WorkspaceApp() {
               )}
               <span>
                 <ShieldCheck size={12} />
-                {account.session ? 'Cloud account' : 'Demo · browser storage'}
+                Stored only on this device
               </span>
               <span>Spendwise © {new Date().getFullYear()}</span>
             </div>
@@ -518,12 +530,18 @@ function WorkspaceApp() {
           .map((p) => (
             <button
               className={page === p.id ? 'active' : ''}
+              aria-label={`${p.label}${!isPro && isProFeature(p.id) ? ' · Pro' : ''}`}
               key={p.id}
               onClick={() => navigate(p.id)}
               aria-current={page === p.id ? 'page' : undefined}
             >
               <p.icon size={20} />
-              <span>{p.id === 'lab' ? 'Decision lab' : p.label}</span>
+              <span>
+                {p.label}
+                {!isPro && isProFeature(p.id) && (
+                  <LockKeyhole size={9} className="mobile-pro-mark" aria-hidden="true" />
+                )}
+              </span>
             </button>
           ))}
         <button onClick={() => setMobileOpen(true)} aria-label="More pages">
@@ -588,9 +606,8 @@ function WorkspaceApp() {
               <span>01</span>
               <h3>Make it your own</h3>
               <p>
-                {account.session
-                  ? 'Set your planned income, preferred display currency, and account opening balances in Settings and Accounts.'
-                  : 'Explore the demo, then sign in to create an empty cloud account. The demo remains separate.'}
+                Set your preferred currency and income plan in Settings, and manage your manual money accounts
+                in Accounts.
               </p>
             </div>
             <div>
@@ -640,10 +657,9 @@ function WorkspaceApp() {
           <div className="info-note">
             <ShieldCheck size={19} />
             <p>
-              {account.session
-                ? 'Your records sync to your account. Check sync status before closing, export regular backups, and sign out on shared devices. Cached records on this device are not application-encrypted.'
-                : 'Demo records are stored in this browser. Customer accounts use cloud sync when configured. Clearing storage removes local records, so export a backup first.'}{' '}
-              No bank connections or automatic payments are included.
+              All financial records are stored on this device. No sign-up, cloud sync, bank connection, or
+              automatic payment is included. Use a trusted device and keep backups; clearing storage or
+              uninstalling can remove your records. Local records and exports are not application-encrypted.
             </p>
           </div>
           <div className="form-actions">
@@ -660,9 +676,14 @@ function WorkspaceApp() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AccountProvider>
-        <WorkspaceApp />
-      </AccountProvider>
+      <FinanceProvider>
+        <SubscriptionProvider>
+          <NativeLifecycle />
+          <FirstRun>
+            <WorkspaceApp />
+          </FirstRun>
+        </SubscriptionProvider>
+      </FinanceProvider>
     </ThemeProvider>
   );
 }

@@ -25,6 +25,7 @@ import {
   YAxis,
 } from 'recharts';
 import { balance, iso, monthKey, plan, totals, type Entry } from './model';
+import { useSubscription } from '../product/Subscription';
 import { useFinance } from './store';
 import { AnimatedValue, CategoryIcon, dateLabel, Empty, GoalGlyph, LinkButton, Panel, Progress } from './ui';
 import { TransactionRows } from './Transactions';
@@ -208,6 +209,7 @@ export function Overview({
   navigate: (page: string) => void;
   onEdit: (t: Entry) => void;
 }) {
+  const { isPro } = useSubscription();
   const { w, money } = useFinance();
   const p = plan(w);
   const rows = w.transactions.filter((t) => t.date.startsWith(month));
@@ -246,7 +248,7 @@ export function Overview({
       amount: balance(w),
       format: (value: number) => money(value, true),
       icon: Wallet,
-      note: `Across ${w.accounts.length} manual accounts`,
+      note: `Across ${w.accounts.length} manual ${w.accounts.length === 1 ? 'account' : 'accounts'}`,
       type: 'neutral',
       spark: normalize(balanceTrend),
     },
@@ -446,88 +448,107 @@ export function Overview({
           <SpendingChart month={month} />
         </Panel>
       </div>
-      <div className="overview-main-grid">
-        <Panel
-          title="Savings goals"
-          sub="Progress toward your targets"
-          action={<LinkButton onClick={() => navigate('goals')}>All goals</LinkButton>}
-        >
-          {w.goals.length ? (
-            <div className="mini-goals">
-              {w.goals.slice(0, 3).map((g) => (
-                <button key={g.id} onClick={() => navigate('goals')}>
-                  <span className="goal-emoji" style={{ background: `${g.color}15` }}>
-                    <GoalGlyph emoji={g.emoji} />
-                  </span>
-                  <h3>{g.name}</h3>
-                  <div>
-                    <strong>{money(g.saved)}</strong>
-                    <span>of {money(g.target)}</span>
-                  </div>
-                  <Progress value={(g.saved / g.target) * 100} color={g.color} />
-                  <small>
-                    {Math.round((g.saved / g.target) * 100)}% of the way there
-                    <ChevronRight size={13} />
-                  </small>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <Empty
-              title="Give your money a purpose"
-              text="A trip, a safety net, a fresh start. What are you saving for?"
-              action={
-                <button className="button" onClick={() => navigate('goals')}>
-                  Create a goal
-                </button>
-              }
-            />
-          )}
-        </Panel>
-        <Panel
-          title="Upcoming payments"
-          sub="Next scheduled bills and subscriptions"
-          action={<LinkButton onClick={() => navigate('bills')}>See all</LinkButton>}
-        >
-          <div className="upcoming-list">
-            {bills.length ? (
-              bills.map((b) => (
-                <button key={b.id} onClick={() => navigate('bills')}>
-                  <CategoryIcon id={b.category} size={16} />
-                  <div>
-                    <strong>{b.name}</strong>
-                    <span>
-                      <CalendarDays size={11} />
-                      {dateLabel(b.nextDue)}
-                      {b.nextDue < iso() && ' · overdue'}
-                    </span>
-                  </div>
-                  <strong>{money(b.amount, true)}</strong>
-                </button>
-              ))
-            ) : (
-              <p className="muted">No upcoming bills. Add a recurring payment to plan ahead.</p>
-            )}
+      {isPro ? (
+        <>
+          <div className="overview-main-grid">
+            <Panel
+              title="Savings goals"
+              sub={isPro ? 'Progress toward your targets' : 'Pro · Plan and track your savings targets'}
+              action={<LinkButton onClick={() => navigate('goals')}>All goals</LinkButton>}
+            >
+              {w.goals.length ? (
+                <div className="mini-goals">
+                  {w.goals.slice(0, 3).map((g) => (
+                    <button key={g.id} onClick={() => navigate('goals')}>
+                      <span className="goal-emoji" style={{ background: `${g.color}15` }}>
+                        <GoalGlyph emoji={g.emoji} />
+                      </span>
+                      <h3>{g.name}</h3>
+                      <div>
+                        <strong>{money(g.saved)}</strong>
+                        <span>of {money(g.target)}</span>
+                      </div>
+                      <Progress value={(g.saved / g.target) * 100} color={g.color} />
+                      <small>
+                        {Math.round((g.saved / g.target) * 100)}% of the way there
+                        <ChevronRight size={13} />
+                      </small>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <Empty
+                  title="Give your money a purpose"
+                  text="A trip, a safety net, a fresh start. What are you saving for?"
+                  action={
+                    <button className="button" onClick={() => navigate('goals')}>
+                      Create a goal
+                    </button>
+                  }
+                />
+              )}
+            </Panel>
+            <Panel
+              title="Upcoming payments"
+              sub={isPro ? 'Next scheduled bills and subscriptions' : 'Pro · Organize recurring payments'}
+              action={<LinkButton onClick={() => navigate('bills')}>See all</LinkButton>}
+            >
+              <div className="upcoming-list">
+                {bills.length ? (
+                  bills.map((b) => (
+                    <button key={b.id} onClick={() => navigate('bills')}>
+                      <CategoryIcon id={b.category} size={16} />
+                      <div>
+                        <strong>{b.name}</strong>
+                        <span>
+                          <CalendarDays size={11} />
+                          {dateLabel(b.nextDue)}
+                          {b.nextDue < iso() && ' · overdue'}
+                        </span>
+                      </div>
+                      <strong>{money(b.amount, true)}</strong>
+                    </button>
+                  ))
+                ) : (
+                  <p className="muted">No upcoming bills. Add a recurring payment to plan ahead.</p>
+                )}
+              </div>
+              <div className="bill-note">
+                <Sparkles size={15} />
+                <span>A plan feels better than a surprise.</span>
+              </div>
+            </Panel>
           </div>
-          <div className="bill-note">
-            <Sparkles size={15} />
-            <span>A plan feels better than a surprise.</span>
+          <button className="lab-teaser" onClick={() => navigate('lab')}>
+            <span className="lab-teaser-icon">
+              <Sparkles size={23} />
+            </span>
+            <span>
+              <span className="eyebrow">PURCHASE PLANNING</span>
+              <strong>The next purchase can wait. Your peace of mind shouldn’t.</strong>
+              <small>Try a what-if in the Decision Lab. See the trade-offs before you spend.</small>
+            </span>
+            <span className="teaser-action">
+              Explore the lab <ArrowUpRight size={17} />
+            </span>
+          </button>
+        </>
+      ) : (
+        <section className="pro-discovery">
+          <div>
+            <span className="pro-pill">SPENDWISE PRO</span>
+            <h2>Planning and reports, when you need more</h2>
+            <p>
+              Budgets, savings goals, recurring bills, detailed analytics and purchase planning—all with
+              records stored on this device.
+            </p>
           </div>
-        </Panel>
-      </div>
-      <button className="lab-teaser" onClick={() => navigate('lab')}>
-        <span className="lab-teaser-icon">
-          <Sparkles size={23} />
-        </span>
-        <span>
-          <span className="eyebrow">PURCHASE PLANNING</span>
-          <strong>The next purchase can wait. Your peace of mind shouldn’t.</strong>
-          <small>Try a what-if in the Decision Lab. See the trade-offs before you spend.</small>
-        </span>
-        <span className="teaser-action">
-          Explore the lab <ArrowUpRight size={17} />
-        </span>
-      </button>
+          <button className="button secondary" onClick={() => navigate('analytics')}>
+            Explore Pro
+            <ArrowUpRight size={15} />
+          </button>
+        </section>
+      )}
     </div>
   );
 }

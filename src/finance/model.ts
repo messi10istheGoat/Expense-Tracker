@@ -58,6 +58,7 @@ export interface Wish {
 export interface Workspace {
   version: 1;
   demo: boolean;
+  onboardingComplete: boolean;
   categories: Category[];
   accounts: Account[];
   transactions: Entry[];
@@ -75,6 +76,7 @@ export function makeWorkspace(demo = true, now = new Date()): Workspace {
   const base: Workspace = {
     version: 1,
     demo,
+    onboardingComplete: false,
     categories: defaultCategories(),
     accounts: defaultAccounts(),
     transactions: [],
@@ -308,6 +310,8 @@ export function validateWorkspace(value: unknown): Workspace {
   };
   if (!value || typeof value !== 'object') return fail();
   const w = { ...value } as Workspace;
+  if (w.onboardingComplete === undefined) w.onboardingComplete = !w.demo;
+  if (typeof w.onboardingComplete !== 'boolean') return fail();
   if (w.categories === undefined) w.categories = defaultCategories();
   if (w.accounts === undefined) w.accounts = defaultAccounts();
   if (
@@ -519,7 +523,7 @@ export function csv(
   ].join('\r\n');
 }
 
-/** Flat financial records: compare values, independent of PostgreSQL JSONB key ordering. */
+/** Compare flat financial records independent of object key ordering. */
 export function assertUnchanged(current: object | undefined, original: object, label: string) {
   const stable = (value: object) =>
     JSON.stringify(

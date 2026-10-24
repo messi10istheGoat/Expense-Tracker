@@ -1,5 +1,7 @@
 # Analytics workspace
 
+**Availability:** Analytics is a Pro destination. The current paywall-first build keeps it locked; pricing and real billing are not configured. The calculations below describe the implemented tool and its development regression coverage, not an active subscription offer.
+
 Open **Analytics**, immediately after Transactions in desktop navigation and mobile bottom navigation. It is separate from **Insights**, which retains its repeat-charge, possible-duplicate, and spending-fingerprint tools.
 
 ## Controls and reports

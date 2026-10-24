@@ -12,7 +12,9 @@ import {
   ShieldCheck,
   Upload,
 } from 'lucide-react';
-import { useAccount } from '../cloud/CloudProvider';
+import { useSubscription } from '../product/Subscription';
+import { freshWorkspace } from '../product/local';
+import { legacyTestMode } from '../product/features';
 import { CategoryManager } from './WorkspaceManager';
 import { ThemeStudio } from './ThemeStudio';
 import { download, iso, makeWorkspace, STORAGE_KEY, validateWorkspace, type Workspace } from './model';
@@ -21,7 +23,7 @@ import { Confirm, Modal, Panel } from './ui';
 
 export function Settings() {
   const { w, update, notify, storageError } = useFinance();
-  const account = useAccount();
+  const { isPro, openPaywall } = useSubscription();
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<Workspace | null>(null);
   const [error, setError] = useState('');
@@ -51,10 +53,6 @@ export function Settings() {
     }
     try {
       const restored = validateWorkspace(JSON.parse(await file.text()));
-      if (account.session && restored.demo)
-        throw new Error(
-          'Demo backups cannot be imported into a customer account. Export a personal workspace instead.',
-        );
       setPending(restored);
     } catch (e) {
       setError(
@@ -141,23 +139,35 @@ export function Settings() {
       <Panel className="appearance-panel">
         <ThemeStudio />
       </Panel>
+      <Panel
+        title="Your plan"
+        sub="No Spendwise account required. Your plan never changes where your records are stored."
+      >
+        <div className="plan-settings">
+          <div>
+            <strong>Spendwise {isPro ? 'Pro' : 'Free'}</strong>
+            <p>
+              {isPro
+                ? 'Development regression fixture. No real subscription is active.'
+                : 'Basic tracking, accounts, categories, personalization and backups are free.'}
+            </p>
+          </div>
+          <button className="button secondary" onClick={() => openPaywall()}>
+            View Pro features
+          </button>
+        </div>
+      </Panel>
       <div className="info-note">
-        <Globe2 size={19} />
+        <HardDrive size={19} />
         <p>
-          <strong>Web and Android.</strong>{' '}
-          {account.session
-            ? 'Your account uses the same records on signed-in devices. Changes made while disconnected wait on this device until you reconnect.'
-            : 'This demo stores records in this browser. Customer accounts use cloud sync when a backend is configured.'}{' '}
-          The Android project is included for packaging; Play Store publication is a separate release step.
+          <strong>Stored only on this device.</strong> No sign-up, cloud database, automatic sync or online
+          account recovery. On the web, data belongs to this browser profile. On Android, it stays in this
+          app’s device storage. Export and restore a backup to move records manually.
         </p>
       </div>
       <Panel
         title="Backup, storage & privacy"
-        sub={
-          account.session
-            ? 'Your records sync to your signed-in account. Back up before replacing data.'
-            : 'Demo records are stored in this browser. Keep a backup before clearing storage.'
-        }
+        sub="Keep a backup before clearing storage or uninstalling the app."
         action={<HardDrive size={18} className="muted" />}
       >
         <div className="data-options">
@@ -241,10 +251,11 @@ export function Settings() {
         <div>
           <h3>Where your data is stored</h3>
           <p>
-            {account.session
-              ? 'Financial records are stored in your cloud account. A cached copy of your records, unsynced changes, and your sign-in session are stored on this device without application-level encryption. Sign out on shared devices. Exported backups are not encrypted.'
-              : 'The demo uses browser storage, which is not encrypted. Anyone with access to this browser profile may access it. Clearing browser data removes the local workspace. Customer accounts are separate and use cloud storage.'}{' '}
-            No bank connections, advertising trackers, or AI API calls are included.
+            Financial records stay on this device. There is no cloud database or Spendwise login. Device
+            storage and exported backups are not application-encrypted. Anyone with access to this browser
+            profile or unlocked app may be able to read them. Clearing storage or uninstalling the app can
+            remove records. Keep backups in a safe place. No bank connections, advertising trackers, or AI API
+            calls are included.
           </p>
           <div>
             <span>
@@ -253,39 +264,37 @@ export function Settings() {
             </span>
             <span>
               <Database size={13} />
-              {account.session ? 'Cloud account + device recovery' : 'Browser demo storage'}
+              Stored on this device
             </span>
           </div>
         </div>
       </div>
-      {!account.session && (
-        <Panel
-          title="A fresh chapter"
-          sub={`You’re currently in ${w.demo ? 'demo mode with sample data' : 'your personal workspace'}.`}
-        >
-          <div className="reset-options">
-            <div>
-              <h3>Start your own journey</h3>
-              <p>Clear all sample data and begin with empty accounts, goals, and transactions.</p>
-              {!account.session && (
-                <button className="button secondary" onClick={() => setReset('personal')}>
-                  Start an empty workspace
-                </button>
-              )}
-            </div>
-            <div>
-              <h3>Explore with sample data</h3>
-              <p>Replace the current workspace with a fresh set of demo records to explore the app.</p>
-              {!account.session && (
-                <button className="button secondary" onClick={() => setReset('demo')}>
-                  <RotateCcw size={14} />
-                  Reset to demo
-                </button>
-              )}
-            </div>
+      <Panel
+        title="Reset this device"
+        sub="Download a backup first. Clearing records cannot be reversed after closing the app."
+      >
+        <div className="reset-options">
+          <div>
+            <h3>Start again</h3>
+            <p>
+              Clear local financial records and return to setup. This does not cancel any future store
+              subscription.
+            </p>
+            <button className="button secondary" onClick={() => setReset('personal')}>
+              Start an empty workspace
+            </button>
           </div>
-        </Panel>
-      )}
+          {legacyTestMode && (
+            <div>
+              <h3>Regression test data</h3>
+              <button className="button secondary" onClick={() => setReset('demo')}>
+                <RotateCcw size={14} />
+                Reset to demo
+              </button>
+            </div>
+          )}
+        </div>
+      </Panel>
       {pending && (
         <Modal
           title="Restore this backup?"
@@ -330,7 +339,12 @@ export function Settings() {
           action={reset === 'personal' ? 'Start empty' : 'Reset to demo'}
           onClose={() => setReset(null)}
           onConfirm={() => {
-            if (!update(() => makeWorkspace(reset === 'demo'), { replaceUnreadable: true })) return;
+            if (
+              !update(() => (legacyTestMode ? makeWorkspace(reset === 'demo') : freshWorkspace()), {
+                replaceUnreadable: true,
+              })
+            )
+              return;
             notify(
               reset === 'personal'
                 ? 'A clean slate. Start by setting your income plan and opening balances.'

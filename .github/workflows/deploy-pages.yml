@@ -30,16 +30,13 @@ jobs:
       - name: Check finance calculations
         run: npm test
       - name: Build production site
-        env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build
       - name: Install browser for integration tests
         run: npx playwright install --with-deps chromium
       - name: Check desktop and mobile workflows
         run: npm run test:e2e
-      - name: Check cloud-client interactions with mocked HTTP
-        run: npm run test:e2e:cloud
+      - name: Check local onboarding, Free plan and Pro paywall
+        run: npm run test:e2e:local
       - name: Check production subpath and offline persistence
         run: npm run test:offline
       - name: Upload Pages artifact
