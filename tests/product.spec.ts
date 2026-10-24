@@ -94,17 +94,13 @@ test('category settings can edit, pin, reorder and safely reassign a used catego
     false,
   );
 });
-test('unconfigured cloud sign-in is explicit, accessible and never simulates success', async ({ page }) => {
-  await page.goto('/');
-  const before = await stored(page);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
-  await expect(page.getByText('Cloud sign-in is not configured in this preview.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeDisabled();
+test('Free and Pro data controls remain accessible without an online account', async ({ page }) => {
+  await page.goto('/#settings');
+  await expect(page.getByRole('heading', { name: 'Your plan', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Create account', exact: true })).toHaveCount(0);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(results.violations).toEqual([]);
-  await page.getByRole('button', { name: 'Explore the demo' }).click();
-  expect((await stored(page)).transactions).toEqual(before.transactions);
 });
 test('category picker supports keyboard creation and outside click does not swallow Save', async ({
   page,

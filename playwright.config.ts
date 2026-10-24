@@ -1,12 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
-  testIgnore: 'cloud.spec.ts',
+  testIgnore: 'local.spec.ts',
+  outputDir: 'test-results/finance',
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5173',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5175',
     trace: 'retain-on-failure',
     launchOptions: process.env.CHROMIUM_EXECUTABLE
       ? {
@@ -25,8 +26,8 @@ export default defineConfig({
     { name: 'mobile', use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' } },
   ],
   webServer: {
-    command: 'npm run dev -- --port 5173',
-    url: 'http://127.0.0.1:5173',
-    reuseExistingServer: !process.env.CI,
+    command: 'VITE_E2E_LEGACY=1 npm run dev -- --port 5175 --strictPort',
+    url: 'http://127.0.0.1:5175',
+    reuseExistingServer: false,
   },
 });

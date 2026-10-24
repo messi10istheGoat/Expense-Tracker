@@ -3,13 +3,14 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { makeWorkspace, STORAGE_KEY, validateWorkspace, type Workspace } from './model';
+import { freshWorkspace } from '../product/local';
+import { legacyTestMode } from '../product/features';
 import { addCategory, catalogMaps } from './catalog';
 import type { TxType } from '../lib/types';
 interface FinanceContext extends ReturnType<typeof catalogMaps> {
@@ -24,44 +25,23 @@ interface FinanceContext extends ReturnType<typeof catalogMaps> {
   canUndo: boolean;
 }
 const Context = createContext<FinanceContext | null>(null);
-export function FinanceProvider({
-  children,
-  initial,
-  onChange,
-  externalVersion,
-}: {
-  children: ReactNode;
-  initial?: Workspace;
-  onChange?: (w: Workspace) => void;
-  externalVersion?: number;
-}) {
+export function FinanceProvider({ children }: { children: ReactNode }) {
   const [storageError, setStorageError] = useState(false);
   const unreadable = useRef(false);
   const [w, setW] = useState<Workspace>(() => {
-    if (initial) return initial;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return validateWorkspace(JSON.parse(raw));
     } catch {
       unreadable.current = true;
     }
-    return makeWorkspace();
+    return legacyTestMode ? { ...makeWorkspace(), onboardingComplete: true } : freshWorkspace();
   });
   const current = useRef(w),
     dirty = useRef(false),
-    remote = useRef(false),
+    fromAnotherTab = useRef(false),
     error = useRef('');
   const history = useRef<Workspace[]>([]);
-  const appliedVersion = useRef(externalVersion);
-  useLayoutEffect(() => {
-    if (initial && externalVersion !== appliedVersion.current) {
-      appliedVersion.current = externalVersion;
-      current.current = initial;
-      history.current = [];
-      dirty.current = false;
-      setW(initial);
-    }
-  }, [initial, externalVersion]);
   const [toast, setToast] = useState('');
   const notify = useCallback((s: string) => setToast(s), []);
   const update = useCallback(
@@ -69,19 +49,22 @@ export function FinanceProvider({
       try {
         if (unreadable.current && !options?.replaceUnreadable)
           throw new Error(
-            'Stored data could not be read. Recover the raw file in Settings, then explicitly restore a backup or start an empty workspace.',
+            'Stored data could not be read. Download the raw recovery file, then explicitly restore a backup or start an empty workspace.',
           );
         const before = current.current,
           after = validateWorkspace(fn(before));
-        if (onChange && after.demo)
-          throw new Error('Sample workspaces cannot be saved to a customer account. Use the separate demo.');
-        onChange?.(after);
         if (options?.replaceUnreadable) unreadable.current = false;
         history.current = [...history.current.slice(-9), before];
         current.current = after;
         dirty.current = true;
-        remote.current = false;
+        fromAnotherTab.current = false;
         setW(after);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(after));
+          setStorageError(false);
+        } catch {
+          setStorageError(true);
+        }
         return true;
       } catch (e) {
         error.current = e instanceof Error ? e.message : 'Could not save this change.';
@@ -89,7 +72,7 @@ export function FinanceProvider({
         return false;
       }
     },
-    [notify, onChange],
+    [notify],
   );
   const createCategory = useCallback(
     (name: string, type: TxType) => {
@@ -102,41 +85,44 @@ export function FinanceProvider({
   const undo = useCallback(() => {
     const before = history.current.pop();
     if (!before) return;
-    onChange?.(before);
     current.current = before;
     dirty.current = true;
-    remote.current = false;
+    fromAnotherTab.current = false;
     setW(before);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(before));
+      setStorageError(false);
+    } catch {
+      setStorageError(true);
+    }
     notify('Last change undone.');
-  }, [notify, onChange]);
+  }, [notify]);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(''), 6000);
     return () => clearTimeout(t);
   }, [toast]);
   useEffect(() => {
-    if (onChange) return;
     if (unreadable.current && !dirty.current) {
       setStorageError(true);
       return;
     }
-    if (remote.current) return;
+    if (fromAnotherTab.current) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(w));
       setStorageError(false);
     } catch {
       setStorageError(true);
     }
-  }, [w, onChange]);
+  }, [w]);
   useEffect(() => {
-    if (onChange) return;
     const listener = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY && e.newValue)
         try {
           const next = validateWorkspace(JSON.parse(e.newValue));
           current.current = next;
           history.current = [];
-          remote.current = true;
+          fromAnotherTab.current = true;
           unreadable.current = false;
           setW(next);
           notify('Workspace updated from another tab.');
@@ -146,12 +132,33 @@ export function FinanceProvider({
     };
     window.addEventListener('storage', listener);
     return () => window.removeEventListener('storage', listener);
-  }, [notify, onChange]);
+  }, [notify]);
   useEffect(() => {
     const handler = (e: Event) => notify((e as CustomEvent<string>).detail);
     window.addEventListener('spendwise:export-error', handler);
     return () => window.removeEventListener('spendwise:export-error', handler);
   }, [notify]);
+  useEffect(() => {
+    const guard = (e: Event) => {
+      if (storageError && dirty.current) {
+        if (e.type === 'beforeunload') {
+          e.preventDefault();
+          (e as BeforeUnloadEvent).returnValue = '';
+        } else if (
+          !window.confirm(
+            'Your latest changes could not be saved on this device. Export a backup before closing. Close anyway?',
+          )
+        )
+          e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', guard);
+    window.addEventListener('spendwise:before-exit', guard);
+    return () => {
+      window.removeEventListener('beforeunload', guard);
+      window.removeEventListener('spendwise:before-exit', guard);
+    };
+  }, [storageError]);
   const maps = useMemo(() => catalogMaps(w), [w.categories, w.accounts]);
   const money = useCallback(
     (n: number, decimals = false) =>
