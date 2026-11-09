@@ -2,7 +2,7 @@
 
 A responsive personal-finance app for desktop/mobile web and a shared Capacitor Android shell, built with React 19, TypeScript, Vite and Recharts.
 
-**No Spendwise account, sign-up/login, cloud database or automatic financial sync.** Records stay in this browser profile or the Android app’s device storage. Fresh installs start with onboarding and empty finances—not sample transactions or fictional balances.
+**No Spendwise account, sign-up/login, cloud database or automatic financial sync.** Optional Google profile import can fill in your name during web setup; it does not create or secure an account. Records stay in this browser profile or the Android app’s device storage. Fresh installs start with onboarding and empty finances—not sample transactions or fictional balances.
 
 **Monetization status: paywall now, billing later.** Pro destinations are locked and explain the subscription offer. Pricing, purchases, trials, upgrades and purchase restoration are unavailable; the app never simulates payment or activates a subscription. There is no published Android release yet. See [release boundaries](docs/RELEASE.md).
 
@@ -48,7 +48,7 @@ npm ci
 npm run dev -- --host 0.0.0.0
 ```
 
-No environment variables, database, API key or authentication provider are required. The production service worker caches the app shell after a successful online visit so the web app can reopen offline. The Android shell uses the packaged build rather than a remote website.
+No environment variables, database, API key or authentication provider are required for local setup. To enable optional Google profile import on the web, create a Google OAuth 2.0 **Web application** client, add the exact app origin to its authorized JavaScript origins, and set `VITE_GOOGLE_CLIENT_ID` to its client ID at build time (for example in `.env.local`). Configure the OAuth consent screen and test users as needed. Google opens its own consent window; the app requests only the OpenID profile scope and uses the access token temporarily to retrieve your name. It does not store the token or create an authenticated session. Google profile import needs internet access and is not supported in the Android shell. A real account system would require a backend to verify identity and manage sessions. The production service worker caches the app shell after a successful online visit so the web app can reopen offline. The Android shell uses the packaged build rather than a remote website.
 
 ```sh
 npm run typecheck

@@ -5,6 +5,7 @@ import { download, iso, STORAGE_KEY, validateWorkspace, type Workspace } from '.
 import { CURRENCIES, completeSetup, freshWorkspace, hasExistingData, type Setup } from './local';
 import { Modal } from '../finance/ui';
 import { legacyTestMode } from './features';
+import { GoogleProfile } from './GoogleProfile';
 export function FirstRun({ children }: { children: ReactNode }) {
   const { w } = useFinance();
   return w.onboardingComplete || legacyTestMode ? children : <Onboarding />;
@@ -77,7 +78,7 @@ export function Onboarding() {
           <ul>
             <li>
               <Check size={18} />
-              No sign-up or password
+              Optional Google profile or local setup
             </li>
             <li>
               <Check size={18} />
@@ -118,7 +119,7 @@ export function Onboarding() {
           </h2>
           <p>
             {step === 1
-              ? 'A few details to personalize this device. No email, phone number, or password required.'
+              ? 'Personalize this device with Google or enter your details manually. No password required.'
               : step === 2
                 ? 'This is a manual money account, like a wallet or bank account. We never connect to your bank.'
                 : 'Basic tracking is free. Advanced planning and reporting tools will offer a Pro subscription.'}
@@ -141,6 +142,7 @@ export function Onboarding() {
           )}
           {step === 1 && (
             <div className="setup-fields">
+              <GoogleProfile onName={(name) => set('name', name)} />
               <label>
                 Your name
                 <input

@@ -572,3 +572,18 @@
     white-space: nowrap;
   }
 }
+
+.google-profile { display: grid; gap: 10px; }
+.google-profile-button {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  min-height: 48px; width: 100%; padding: 10px 16px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text); font: inherit; font-weight: 600;
+  cursor: pointer;
+}
+.google-profile-button:hover { background: var(--surface-alt); }
+.google-profile-button:disabled { opacity: .65; cursor: wait; }
+.google-profile-icon { font: 700 20px Arial, sans-serif; color: #4285f4; }
+.google-profile small { color: var(--subtle); line-height: 1.5; }
+.google-profile-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
+.google-profile-divider::before, .google-profile-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
